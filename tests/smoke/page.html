@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>visual-region · smoke</title>
+    <link rel="stylesheet" href="./page.css" />
+  </head>
+  <body>
+    <main>
+      <h1>visual-region · smoke</h1>
+
+      <div class="row">
+        <div id="probe" class="probe">probe</div>
+        <div id="outside" class="outside">outside the region</div>
+      </div>
+
+      <p id="text" class="selectable">
+        The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. Sphinx of black
+        quartz, judge my vow. How vexingly quick daft zebras jump! The five boxing wizards jump quickly. The
+        quick brown fox jumps over the lazy dog.
+      </p>
+
+      <button id="click-target" type="button">click</button>
+
+      <div
+        id="surface"
+        class="surface"
+        data-visual-region="invert"
+        data-activation="element"
+        data-surface="self"
+      >
+        surface marked up with data attributes
+      </div>
+
+      <div id="touch-surface" class="surface">touch surface</div>
+
+      <dialog id="site-dialog">
+        <p>site dialog</p>
+        <button id="dialog-close" type="button">close</button>
+      </dialog>
+
+      <div id="site-popover" popover="manual">site popover</div>
+      <!-- A second manual popover: scenario 4 — several popovers at once.
+           The styles in page.css give them a partial overlap: without an overlap
+           "who is above whom" cannot be checked pixel by pixel. -->
+      <div id="site-popover-2" popover="manual">second site popover</div>
+
+      <div id="fullscreen-target" class="fullscreen-target">fullscreen target</div>
+      <!-- Fullscreen requires user activation: it cannot be enabled from evaluate().
+           The runner presses the button (real input), the handler is in suite.js. -->
+      <button id="fullscreen-button" type="button">enter fullscreen</button>
+
+      <div class="tall"></div>
+    </main>
+    <script type="module" src="./suite.js"></script>
+  </body>
+</html>

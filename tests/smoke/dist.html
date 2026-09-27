@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>visual-region — ways to load the built package</title>
+    <link rel="stylesheet" href="page.css" />
+
+    <!--
+      Scenario 1: ESM import of the clean entry point.
+      The script is external (see `dist-page.js`) and deferred (module), so by the time
+      it runs the markup is already parsed while the classic IIFE <script> has not
+      been added yet — the runner adds it itself in a separate step. Thus "the import
+      created nothing" is checked honestly, not as "not done yet".
+      External rather than inline: the same page is served under strict CSP
+      (`/csp-dist/`), where inline scripts are forbidden.
+    -->
+    <script type="module" src="./dist-page.js"></script>
+  </head>
+
+  <body>
+    <h1>Load scenarios</h1>
+
+    <div class="probe" id="probe"></div>
+    <div class="outside" id="outside">outside the region</div>
+
+    <!-- Markup for auto-initialization: the IIFE build picks it up (scenario 2).
+         Activation is by modifier, so the auto instance does not interfere with other checks. -->
+    <div id="marked" data-visual-region="invert" data-activation="modifier">marked block</div>
+  </body>
+</html>

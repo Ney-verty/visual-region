@@ -1,0 +1,9 @@
+# Build output and caches
+.tmp-build/
+dist/
+_site/
+node_modules/
+package-lock.json
+
+# Generated test output: the runner writes its contents, there is nothing to format
+tests/smoke/out/

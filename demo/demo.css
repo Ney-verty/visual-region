@@ -1,0 +1,667 @@
+/*
+ * Demo styles. Nothing to do with the library: the visual-region layer lives in the
+ * top layer and does not depend on the page's CSS (except for the deliberately
+ * "hostile" cards in the "Different stacking contexts" section — they are there to
+ * make this visible to the eye).
+ */
+
+:root {
+  --bg: #10141c;
+  --bg-soft: #171d28;
+  --bg-card: #1d2534;
+  --line: #2c3648;
+  --fg: #e8edf6;
+  --fg-dim: #a4b0c4;
+  --accent: #ffb454;
+  --accent-2: #6bb6ff;
+  --danger: #ff7a6b;
+  --radius: 12px;
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #0d1119 0%, var(--bg) 40%, #0c1017 100%);
+  color: var(--fg);
+  font:
+    16px/1.6 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+code {
+  background: #0b0f16;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.05em 0.35em;
+  color: var(--accent-2);
+}
+
+kbd {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 0.1em 0.4em;
+  color: var(--fg);
+}
+
+pre {
+  background: #0b0f16;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--fg);
+}
+
+a {
+  color: var(--accent-2);
+}
+
+/* --- topbar ---------------------------------------------------------------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  background: rgba(13, 17, 25, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.brand .ver {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.how {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 14px;
+  max-width: 90ch;
+}
+
+.how strong {
+  color: var(--fg);
+}
+
+/* --- layout ---------------------------------------------------------------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 32px;
+  align-items: start;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
+.content {
+  min-width: 0;
+}
+
+.block {
+  margin-top: 48px;
+}
+
+h1 {
+  font-size: clamp(26px, 3.4vw, 40px);
+  line-height: 1.2;
+  margin: 0 0 12px;
+}
+
+h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+h2 {
+  font-size: 22px;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+h3 {
+  font-size: 17px;
+  margin: 24px 0 8px;
+}
+
+.lede,
+.section-note,
+.caption {
+  color: var(--fg-dim);
+  max-width: 92ch;
+}
+
+.section-note {
+  margin: 8px 0 16px;
+  font-size: 14.5px;
+}
+
+.caption {
+  font-size: 13px;
+}
+
+/* --- playground ------------------------------------------------------------ */
+
+.playground {
+  position: relative;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  padding: 28px 20px 20px;
+}
+
+.zone-hint {
+  position: absolute;
+  top: -13px;
+  left: 16px;
+  margin: 0;
+  padding: 0 8px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.pg-col h3 {
+  margin-top: 0;
+}
+
+.pg-small {
+  font-size: 14px;
+  color: var(--fg-dim);
+}
+
+.pg-svg {
+  width: 100%;
+  height: auto;
+  color: var(--fg);
+  margin-top: 10px;
+}
+
+.pg-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.pg-gradient {
+  margin-top: 12px;
+  height: 110px;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-end;
+  padding: 10px;
+  font-size: 12px;
+  color: #08121f;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.75), transparent 45%),
+    conic-gradient(from 210deg at 25% 75%, #ffb454, #6bb6ff, #7fe0b0, #ffb454),
+    linear-gradient(120deg, #ffd88a, #4f8cff);
+}
+
+.pg-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.mini-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+.mini-card h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.mini-card p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--fg-dim);
+}
+
+.mini-card--blend {
+  mix-blend-mode: screen;
+  border-left-color: var(--accent-2);
+}
+
+.mini-card--grad {
+  border-left-color: #7fe0b0;
+  background: linear-gradient(135deg, rgba(107, 182, 255, 0.25), rgba(127, 224, 176, 0.15)), var(--bg-card);
+}
+
+.btn {
+  font: inherit;
+  color: #08121f;
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  filter: brightness(1.08);
+}
+
+.btn.danger {
+  background: var(--danger);
+}
+
+.link {
+  margin-left: 10px;
+}
+
+/* --- stacking contexts ----------------------------------------------------- */
+
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.stack-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.stack-card h3 {
+  margin-top: 0;
+}
+
+.stack-card p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fg-dim);
+}
+
+.stack-card--transform {
+  transform: rotate(-2deg) translateZ(0);
+}
+
+.stack-card--opacity {
+  opacity: 0.55;
+}
+
+.stack-card--filter {
+  filter: saturate(1.8) contrast(1.05);
+}
+
+.stack-card--zindex {
+  position: relative;
+  z-index: 9999;
+}
+
+.stack-card--blend {
+  mix-blend-mode: multiply;
+  background: linear-gradient(135deg, #ffd88a, #6bb6ff);
+}
+
+.stack-card--sticky {
+  position: sticky;
+  top: 76px;
+}
+
+/* The badge sits to the left of the panel: 340 (panel) + 32 (gap) + 24 (page padding)
+   + 16 (its own gap) — otherwise it overlaps the panel, which was measured. */
+.badge-fixed {
+  position: fixed;
+  right: 412px;
+  bottom: 16px;
+  margin: 0;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+
+/* The touch-gesture button — only on devices without hover. */
+.touch-quick {
+  display: none;
+  font: inherit;
+  font-size: 13px;
+  color: #08121f;
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+@media (hover: none) {
+  .touch-quick {
+    display: block;
+    position: absolute;
+    top: -15px;
+    right: 14px;
+  }
+}
+
+/* --- media ----------------------------------------------------------------- */
+
+.video {
+  max-width: 100%;
+  border-radius: var(--radius);
+  background: #000;
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* --- connecting ------------------------------------------------------------ */
+
+.decl-card {
+  border: 2px dashed var(--accent-2);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  padding: 18px;
+  cursor: crosshair;
+}
+
+.decl-card p {
+  margin: 0;
+}
+
+/* --- limits ---------------------------------------------------------------- */
+
+.limits {
+  padding-left: 22px;
+  max-width: 100ch;
+}
+
+.limits > li {
+  margin-bottom: 12px;
+}
+
+.limits-demo {
+  display: block;
+  margin-top: 8px;
+}
+
+/* --- panel ----------------------------------------------------------------- */
+
+.panel {
+  position: sticky;
+  top: 88px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  max-height: calc(100vh - 112px);
+  overflow-y: auto;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 19px;
+}
+
+.panel h3 {
+  font-size: 15px;
+  margin: 20px 0 8px;
+}
+
+.panel .section-note {
+  font-size: 13px;
+}
+
+.status {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 14px 0;
+  font-size: 13.5px;
+}
+
+.status dt {
+  color: var(--fg-dim);
+}
+
+.status dd {
+  margin: 0;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 13px;
+  background: #223047;
+  border: 1px solid var(--line);
+}
+
+.badge[data-state='enabled'] {
+  background: #1d3a2c;
+  border-color: #2f6b4d;
+  color: #9fe8bd;
+}
+
+.badge[data-state='disabled'] {
+  background: #3a3320;
+  border-color: #6b5a2f;
+  color: #f0d99b;
+}
+
+.badge[data-state='unsupported'],
+.badge[data-state='destroyed'] {
+  background: #3a2020;
+  border-color: #6b2f2f;
+  color: #ffb3aa;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  color: var(--fg-dim);
+  margin-bottom: 4px;
+}
+
+select {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+}
+
+select:disabled,
+input:disabled,
+button:disabled {
+  opacity: 0.5;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 8px;
+}
+
+.buttons button {
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--fg);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+
+.buttons button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.log li {
+  border-bottom: 1px solid var(--line);
+  padding: 4px 0;
+  color: var(--fg-dim);
+}
+
+.log li:first-child {
+  color: var(--fg);
+}
+
+.log .empty {
+  border: 0;
+  font-style: italic;
+}
+
+/* --- dialog and footer ----------------------------------------------------- */
+
+.dialog {
+  background: var(--bg-card);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  max-width: 420px;
+}
+
+.dialog h2 {
+  margin-top: 0;
+}
+
+.footer {
+  border-top: 1px solid var(--line);
+  padding: 20px 24px 40px;
+  color: var(--fg-dim);
+  font-size: 14px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* --- narrow screen --------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel {
+    position: static;
+    max-height: none;
+  }
+
+  .badge-fixed {
+    right: 16px;
+  }
+}
+
+/* Phone: the playground has to be reachable without reading. The heading and the
+   intro paragraph shrink so that the dashed zone is visible on the first screen. */
+@media (max-width: 700px) {
+  .layout {
+    padding: 18px 16px 48px;
+    gap: 24px;
+  }
+
+  .topbar {
+    padding: 10px 16px;
+    gap: 8px;
+  }
+
+  .how {
+    font-size: 13px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .lede {
+    font-size: 14.5px;
+  }
+
+  .block {
+    margin-top: 28px;
+  }
+
+  .playground {
+    padding: 24px 14px 14px;
+  }
+}

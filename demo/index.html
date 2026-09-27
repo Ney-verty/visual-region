@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>visual-region 0.1 — demo and playground</title>
+    <!--
+      The demo page. Built as an ordinary static site: `demo/` + `dist/`
+      (see scripts/build-demo-site.mjs and .github/workflows/pages.yml).
+      No network is needed: the only media file is ./clip.mp4, everything else
+      (gradients, "photos", graphics) is CSS and SVG inside the page.
+
+      The page text is English: this is the release showcase (CONTRIBUTING.md,
+      Language).
+
+      Rebuilding clip.mp4:
+        ffmpeg -y -f lavfi -i "gradients=s=480x270:duration=2.5:speed=0.25:c0=0x1b2a4a:c1=0xe0b050:c2=0x2f7f6f:c3=0xd0552f" \
+          -pix_fmt yuv420p -c:v libx264 -profile:v baseline -level 3.0 -crf 32 \
+          -movflags +faststart demo/clip.mp4
+    -->
+    <link rel="stylesheet" href="./demo.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">visual-region <span class="ver">0.1</span></div>
+      <p class="how">
+        <strong>Drag with the mouse inside the dashed playground</strong> — only what falls inside the region
+        changes, everything else stays as it was. Turn on another activation (for example
+        <kbd>Alt</kbd>&nbsp;+&nbsp;dragging anywhere on the page) in the panel on the right: it always shows
+        which one is actually in effect.
+      </p>
+    </header>
+
+    <main class="layout">
+      <div class="content">
+        <section class="hero">
+          <h1>A region where <em>only what is inside it</em> changes</h1>
+          <p class="lede">
+            An ordinary rectangle drag over someone else's page: the DOM, the text, the images and the site's
+            CSS are untouched, clicks and links keep working, and on pointer release the page returns to its
+            original state. The demo uses the built package (<code>../dist/index.js</code>) as an external
+            consumer — through the same public API that is available from npm.
+          </p>
+        </section>
+
+        <section class="block">
+          <h2>Playground</h2>
+          <p class="section-note">
+            This is the playground's <code>surface</code> and the target of <code>element</code>
+            activation: the gesture starts only here. Everything inside is ordinary markup: text, a button,
+            canvas, SVG, an image, a gradient, cards. The button inside the playground still clicks — the
+            inversion does not intercept clicks.
+          </p>
+
+          <div class="playground" id="playground">
+            <p class="zone-hint" aria-hidden="true">drag here</p>
+            <!-- The button is visible only on devices without hover (`@media (hover: none)`) —
+                 that is, where no mouse is available and the usual gesture cannot be started.
+                 It is not a second source of truth: it toggles the same `touch` option as the
+                 checkbox in the panel, and its label reflects that checkbox's state. -->
+            <button type="button" id="btn-touch-quick" class="touch-quick">Turn on the touch gesture</button>
+
+            <div class="pg-grid">
+              <div class="pg-col">
+                <h3>Text</h3>
+                <p>
+                  The region inverts whatever falls inside it: black text becomes white, the background
+                  becomes dark. Note that the layer itself copies nothing and filters nothing — it blends with
+                  the page through <code>mix-blend-mode: difference</code>, so the text stays live and
+                  selectable.
+                </p>
+                <p class="pg-small">Clicks so far: <strong id="click-count">0</strong> — the button works.</p>
+                <p>
+                  <button type="button" id="pg-button" class="btn">Click me</button>
+                  <a href="#limits" class="link" draggable="false">a link inside the playground</a>
+                </p>
+              </div>
+
+              <div class="pg-col">
+                <h3>Canvas and SVG</h3>
+                <canvas id="chart" width="320" height="140" aria-label="Bar chart"></canvas>
+                <svg class="pg-svg" viewBox="0 0 320 90" role="img" aria-label="Vector illustration">
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stop-color="#7fd1ff" />
+                      <stop offset="1" stop-color="#ff8a5c" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="46" cy="45" r="30" fill="url(#g1)" />
+                  <rect
+                    x="96"
+                    y="18"
+                    width="54"
+                    height="54"
+                    rx="10"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                  />
+                  <path d="M172 72 L206 18 L240 72 Z" fill="none" stroke="currentColor" stroke-width="3" />
+                  <path d="M258 72 q18 -60 44 0" fill="none" stroke="currentColor" stroke-width="3" />
+                </svg>
+              </div>
+
+              <div class="pg-col">
+                <h3>Image and gradient</h3>
+                <!-- draggable="false" is not cosmetic: <img> and <a> are draggable by
+                     default via native HTML5 drag, and it overrides the region gesture.
+                     Inside a surface this is the first thing a consumer stumbles on. -->
+                <img
+                  class="pg-img"
+                  draggable="false"
+                  alt="Vector landscape: this is an img with an SVG in a data URI, the demo never goes to the network"
+                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 180'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%2327486f'/%3E%3Cstop offset='1' stop-color='%23e8a13c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='320' height='180' fill='url(%23s)'/%3E%3Ccircle cx='246' cy='54' r='22' fill='%23ffe9a8'/%3E%3Cpath d='M0 140 L86 74 L150 128 L206 96 L320 150 L320 180 L0 180 Z' fill='%23223144'/%3E%3Cpath d='M0 160 L70 118 L140 158 L220 126 L320 168 L320 180 L0 180 Z' fill='%23161f2c'/%3E%3C/svg%3E"
+                />
+                <div class="pg-gradient">
+                  <span>linear-gradient + radial-gradient + conic-gradient</span>
+                </div>
+              </div>
+
+              <div class="pg-col cards-col">
+                <h3>Cards</h3>
+                <div class="pg-cards">
+                  <article class="mini-card">
+                    <h4>Card</h4>
+                    <p>An ordinary border and shadow.</p>
+                  </article>
+                  <article class="mini-card mini-card--blend">
+                    <h4>Blend of its own</h4>
+                    <p>
+                      The card has its own <code>mix-blend-mode</code> — inside the region it composes with
+                      ours.
+                    </p>
+                  </article>
+                  <article class="mini-card mini-card--grad">
+                    <h4>Gradient</h4>
+                    <p>A background gradient and translucency.</p>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2>Different stacking contexts</h2>
+          <p class="section-note">
+            The layer lives in the top layer, so neither the content's <code>z-index</code> nor the stacking
+            contexts it creates get in its way. Check that on this very page: drag a region over these cards.
+          </p>
+          <div class="stack-grid">
+            <article class="stack-card stack-card--transform">
+              <h3>transform</h3>
+              <p>
+                <code>transform: rotate(-2deg)</code> — the card creates its own stacking context and
+                containing block.
+              </p>
+            </article>
+            <article class="stack-card stack-card--opacity">
+              <h3>opacity: .55</h3>
+              <p>A translucent card: it too has a stacking context of its own.</p>
+            </article>
+            <article class="stack-card stack-card--filter">
+              <h3>filter</h3>
+              <p><code>filter: saturate(1.8)</code> — one more context and one more rasterisation layer.</p>
+            </article>
+            <article class="stack-card stack-card--zindex">
+              <h3>z-index: 9999</h3>
+              <p>
+                An island above its neighbours in the normal flow — a layer in the top layer does not care.
+              </p>
+            </article>
+            <article class="stack-card stack-card--blend">
+              <h3>mix-blend-mode: multiply</h3>
+              <p>
+                The element brings a blending mode of its own: the result inside the region is not "inversion
+                on its own" but our inversion composed with its blend.
+              </p>
+            </article>
+            <article class="stack-card stack-card--sticky">
+              <h3>sticky</h3>
+              <p>The section heading sticks to the top as you scroll — the region stays where you drew it.</p>
+            </article>
+          </div>
+          <p class="badge-fixed">position: fixed — the badge does not move away when you scroll</p>
+        </section>
+
+        <section class="block">
+          <h2>Video</h2>
+          <p class="section-note">
+            Live video inside the region is not a freeze-frame: the layer blends with the frame itself rather
+            than copying it. Check it separately on a real device (compositing behaves differently in headless
+            runs).
+          </p>
+          <video class="video" controls muted loop playsinline preload="metadata" width="480" height="270">
+            <source src="./clip.mp4" type="video/mp4" />
+            Your browser does not play mp4 — open the <a href="./clip.mp4">file</a> on its own.
+          </video>
+          <p class="caption">
+            480×270, 2.5 s, 53 KB. The clip is generated by <code>ffmpeg</code> (the command is in a comment
+            at the top of this page) and sits next to the demo: the page works without a network.
+          </p>
+        </section>
+
+        <section class="block" id="connect">
+          <h2>Connecting</h2>
+          <p class="section-note">
+            Three ways below, all on the public v0.1 API. This page itself uses the first one.
+          </p>
+
+          <h3>1. Package (ESM)</h3>
+          <pre><code>import { visualRegion } from 'visual-region';
+
+const region = visualRegion({ activation: 'element', surface: document.querySelector('#playground') });</code></pre>
+
+          <h3>2. CDN (IIFE, no build step)</h3>
+          <pre><code>&lt;script src="visual-region.global.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const region = VisualRegion.visualRegion({ activation: 'modifier', modifier: 'alt' });
+&lt;/script&gt;</code></pre>
+
+          <h3>3. Markup (<code>data-visual-region="invert"</code>)</h3>
+          <pre><code>import { autoInit } from 'visual-region';
+
+autoInit(); // or import 'visual-region/auto' — the same thing, but at import time</code></pre>
+          <p class="section-note">
+            A live example: this card is marked up with attributes and enabled through
+            <code>autoInit()</code> when the page loads. Drag right inside it — <code>persistent</code>
+            keeps the region after you release, and the next gesture replaces it.
+          </p>
+          <div id="declarative">
+            <div
+              class="decl-card"
+              data-visual-region="invert"
+              data-activation="element"
+              data-surface="self"
+              data-persistent="true"
+            >
+              <p>
+                <strong>The region is enabled by markup</strong><br />
+                <code
+                  >data-visual-region="invert" data-activation="element" data-surface="self"
+                  data-persistent="true"</code
+                >
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="block" id="limits">
+          <h2>What is not inverted, and why</h2>
+          <p class="section-note">
+            These are v0.1 limitations, not promises: each one is either measured or follows directly from how
+            the top layer works. The full list is in the README (Known issues).
+          </p>
+          <ul class="limits">
+            <li>
+              <strong>Anything that entered the top layer after our region.</strong> Order in the top layer is
+              "last in, higher up". A dialog opened after the gesture began ends up above the layer; we do not
+              fight over that order.
+              <span class="limits-demo">
+                <button type="button" id="btn-dialog" class="btn">Open a modal dialog</button>
+                <span class="caption"
+                  >— measured in three engines: the library does not lose its own layer (<code
+                    >lost-top-layer</code
+                  >
+                  does not arrive), the dialog is painted above the region, and the rest of the page under
+                  that same region keeps inverting.</span
+                >
+              </span>
+            </li>
+            <li>
+              <strong>Fullscreen.</strong> A fullscreen element is in the top layer too, and above our region
+              as well.
+            </li>
+            <li>
+              <strong>Overlapping regions cancel each other out.</strong> Two inversions bring back the
+              original: the semantics of nested regions are undefined in v0.1.
+            </li>
+            <li>
+              <strong>The region is anchored to the viewport, not to the document.</strong> With
+              <code>persistent</code> the region stays in place while the content under it scrolls away.
+            </li>
+            <li>
+              <strong>Legacy <code>mount: 'fixed'</code>.</strong> Outside the top layer: it breaks on hostile
+              <code>transform</code>/<code>opacity</code>/<code>filter</code> on <code>html</code>/<code
+                >body</code
+              >
+              and on a high <code>z-index</code> in the content (measured). For environments without the
+              Popover API only.
+            </li>
+            <li>
+              <strong>A 2 CSS-px fringe</strong> at the region's edge under a hostile
+              <code>html { transform }</code> is not inverted in full. The interior itself is exact (<code
+                >maxErr = 0</code
+              >, inverted fraction = 1): that is the behaviour of edge rasterisation, not an inversion error.
+              Measured at DPR=1 and DPR=2.
+            </li>
+            <li>
+              <strong>Touch input is off by default</strong> (<code>touch: 'off'</code>): v0.1 does not touch
+              mobile scrolling or pinch-zoom. Turn on <code>touch: 'surface'</code> in the panel to drag with
+              a finger inside the playground.
+            </li>
+          </ul>
+
+          <h3>What v0.1 does not have</h3>
+          <p class="section-note">
+            This demo's panel shows nothing that does not exist: <code>effect</code> is only
+            <code>invert</code>, <code>shape</code> is only <code>rect</code>. There is no
+            <code>filter</code>, <code>circle</code>, <code>freehand</code>, <code>spotlight</code>,
+            <code>theme</code> or <code>colorMap</code> here — those values do not exist in the library.
+          </p>
+        </section>
+      </div>
+
+      <aside class="panel" aria-label="Library control panel">
+        <h2>Control panel</h2>
+        <p class="section-note">
+          It controls <strong>one</strong> region — the one you draw in the playground. The second instance
+          (the "Connecting" card) is enabled by markup and does not obey the panel.
+        </p>
+
+        <dl class="status">
+          <dt><code>supported</code></dt>
+          <dd id="st-supported">…</dd>
+          <dt><code>state</code></dt>
+          <dd><span class="badge" id="st-state">…</span></dd>
+          <dt>last region</dt>
+          <dd id="st-bounds">none</dd>
+        </dl>
+
+        <div class="field">
+          <label for="opt-activation">activation</label>
+          <select id="opt-activation">
+            <option value="element">element — only inside the playground</option>
+            <option value="modifier">modifier — modifier + drag</option>
+            <option value="always">always — anywhere, no modifier</option>
+            <option value="programmatic">programmatic — from code only</option>
+          </select>
+          <p class="hint" id="hint-activation"></p>
+        </div>
+
+        <div class="field">
+          <label for="opt-modifier">modifier</label>
+          <select id="opt-modifier">
+            <option value="alt">Alt</option>
+            <option value="shift">Shift</option>
+            <option value="ctrl">Ctrl</option>
+            <option value="meta">Meta</option>
+          </select>
+          <p class="hint">
+            Used only with <code>activation: 'modifier'</code>; otherwise the library warns about a
+            superfluous option.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="opt-mount">mount</label>
+          <select id="opt-mount">
+            <option value="top-layer">top-layer — the default</option>
+            <option value="fixed">fixed — Legacy</option>
+          </select>
+          <p class="hint" id="hint-mount"></p>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" id="opt-persistent" />
+          <span><code>persistent</code> — keep the region after releasing</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" id="opt-touch" />
+          <span><code>touch: 'surface'</code> — touch gesture in the playground</span>
+        </label>
+        <p class="hint" id="hint-touch">
+          <code>touch: 'off'</code> by default. For the touch gesture the library lifts the playground's
+          <code>touch-action</code> itself — while that is on, scrolling the page with a finger inside the
+          playground does not work.
+        </p>
+
+        <div class="buttons">
+          <button type="button" id="btn-toggle">Turn off</button>
+          <button type="button" id="btn-show">Show region</button>
+          <button type="button" id="btn-remove">Remove region</button>
+          <button type="button" id="btn-reset">Reset settings</button>
+          <button type="button" id="btn-destroy" class="danger">Destroy (irreversible)</button>
+          <button type="button" id="btn-recreate" hidden>Create again</button>
+        </div>
+        <p class="hint">
+          "Show region" is the programmatic API: <code>setRegion({ x, y, width, height })</code>. "Reset
+          settings" returns the panel to the state the page opened with.
+        </p>
+
+        <h3>Event log</h3>
+        <ol class="log" id="log">
+          <li class="empty">empty for now</li>
+        </ol>
+        <p class="hint">
+          Discrete events of the public API. <code>change</code> is not logged — it arrives every frame, and
+          its value is visible under "last region".
+        </p>
+      </aside>
+    </main>
+
+    <dialog id="demo-dialog" class="dialog">
+      <h2>Modal dialog</h2>
+      <p>
+        The dialog entered the top layer <em>after</em> the region. Close it and drag a region again — the
+        library does not reopen its layer on its own.
+      </p>
+      <form method="dialog"><button class="btn" type="submit">Close</button></form>
+    </dialog>
+
+    <footer class="footer">
+      <p>
+        The demo is part of the visual-region 0.1 repository. Built from the package (<code>dist/</code>),
+        with no import of internal <code>src/*</code> modules. Limitations are listed above.
+      </p>
+    </footer>
+
+    <script type="module" src="./demo.js"></script>
+  </body>
+</html>

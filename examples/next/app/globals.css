@@ -1,0 +1,55 @@
+:root {
+  color-scheme: light dark;
+  font:
+    16px/1.5 system-ui,
+    sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+  justify-items: start;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+/* The card is what the gesture listens on (`surface`). One flat colour on purpose:
+   the example check reads pixels inside and outside the region. */
+#surface {
+  background: #3366cc;
+  color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 520px;
+}
+
+#surface p {
+  margin: 0 0 12px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#status {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  min-height: 1.5em;
+  margin: 0;
+}
+
+.hint {
+  color: #666;
+  max-width: 520px;
+}

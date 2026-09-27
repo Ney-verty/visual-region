@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "sourceMap": false,
+    "declarationMap": true,
+    "outDir": "dist"
+  },
+  /* The program roots are the public entry points only. TS pulls in the modules
+     imported from them by itself and emits declarations for those as well (they
+     are needed: `index.d.ts` re-exports types from `./core/types.js` and others).
+     `cdn.ts`, however, is the entry of the IIFE build and has no place in the
+     package, so it is not part of the program. */
+  "files": ["src/index.ts", "src/auto.ts"],
+  "include": []
+}

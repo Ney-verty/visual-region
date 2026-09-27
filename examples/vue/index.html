@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>visual-region — Vue example</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        display: grid;
+        gap: 20px;
+        justify-items: start;
+      }
+      /* `display: contents` keeps the mount node out of the layout, so the page looks
+         exactly like the other examples even though Vue renders several root nodes. */
+      #app {
+        display: contents;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+      /* The card is what the gesture listens on (`surface`). One flat colour on
+         purpose: the example check reads pixels inside and outside the region. */
+      #surface {
+        background: #3366cc;
+        color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 520px;
+      }
+      #surface p {
+        margin: 0 0 12px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      #status {
+        font-family: ui-monospace, monospace;
+        font-size: 14px;
+        min-height: 1.5em;
+        margin: 0;
+      }
+      .hint {
+        color: #666;
+        max-width: 520px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./dist/bundle.js"></script>
+  </body>
+</html>

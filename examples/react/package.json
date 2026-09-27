@@ -1,0 +1,17 @@
+{
+  "name": "visual-region-example-react",
+  "version": "0.0.0",
+  "private": true,
+  "description": "React example: a Client Component creating a visual-region instance on a React ref.",
+  "type": "module",
+  "scripts": {
+    "build": "node ../../tests/examples/run.mjs react",
+    "check": "node ../../tests/examples/run.mjs react",
+    "serve": "node ../../tests/examples/run.mjs react --serve"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "visual-region": "file:../.."
+  }
+}

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>visual-region — vanilla example</title>
+
+    <!--
+      A bare specifier needs a resolver. A bundler does it for you, and a CDN does it
+      too: unpkg/jsdelivr read the `unpkg` field of the package and serve the IIFE build.
+      This example deliberately has no build step, so the import map names the built
+      file itself. The path below mirrors `exports["."].import` in the package — the
+      example check (`npm run check:examples vanilla`) asserts the two stay equal.
+
+      `npm install` in this directory links the library into node_modules (package.json
+      declares it as `file:../..`), so there is nothing else to do before opening the page.
+      Any static server will do — the module has to be served over HTTP, not file://.
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "visual-region": "./node_modules/visual-region/dist/index.js"
+        }
+      }
+    </script>
+
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        display: grid;
+        gap: 20px;
+        justify-items: start;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+      /* The card is what the gesture listens on (`surface`). One flat colour on
+         purpose: the example check reads a pixel inside and outside the region, and
+         a solid backdrop makes that number meaningful. */
+      #surface {
+        background: #3366cc;
+        color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 520px;
+      }
+      #surface p {
+        margin: 0 0 12px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      #status {
+        font-family: ui-monospace, monospace;
+        font-size: 14px;
+        min-height: 1.5em;
+        margin: 0;
+      }
+      .hint {
+        color: #666;
+        max-width: 520px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>visual-region — vanilla example</h1>
+
+    <p class="hint">
+      Drag inside the card below: only what is inside the region changes, and releasing the pointer puts the
+      page back. Clicking the link and selecting the text still work as usual.
+    </p>
+
+    <section id="surface">
+      <p><strong>This card is the surface.</strong></p>
+      <p>
+        The region inverts the pixels underneath it. Nothing in this DOM is modified: the text, the link and
+        the selection behave exactly as they would without the library.
+      </p>
+      <!-- draggable="false": a plain <a> starts the native HTML5 drag, which competes
+           with the region gesture. Fixing that on the consumer's side is the documented
+           behaviour, not a library feature. Same applies to <img>. -->
+      <p>
+        <a href="https://example.com/" draggable="false" style="color: #fff">A link that stays clickable</a>
+      </p>
+    </section>
+
+    <div class="controls">
+      <button type="button" id="show">Show a region programmatically</button>
+      <button type="button" id="clear">Clear it</button>
+      <button type="button" id="destroy">Destroy the instance</button>
+    </div>
+
+    <p id="status" role="status"></p>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

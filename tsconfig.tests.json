@@ -1,0 +1,17 @@
+{
+  /* Type-checking program for the test harness.
+     The main `tsconfig.json` includes only `src` — tests are not part of it, so a
+     typo in a test would not be caught by `npm run typecheck` and would surface
+     only at run time. Here tests are added to the program explicitly, and there is
+     no emit: this config exists for the sake of `--noEmit`. */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "stripInternal": false
+  },
+  "include": ["src", "tests/unit", "vitest.config.ts"]
+}

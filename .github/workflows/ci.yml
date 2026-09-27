@@ -1,0 +1,122 @@
+# CI.
+#
+# What is here and why it is set up this way.
+#
+# The environment is pinned to the baseline smoke runs (tests/smoke/BASELINE.md):
+# Ubuntu 22.04 + Node 20 + playwright@1.63.0 from package-lock. Browser versions
+# are installed not by us but by Playwright, from its own revision table, so
+# `npm ci` (rather than `npm install`) and a fixed Playwright version without `^`
+# are not a formality here: the reproducibility of the numbers rests on them.
+#
+# Two jobs rather than one: e2e pulls in three browsers and takes minutes, while
+# the static checks take seconds. Running them sequentially would mean paying in
+# waiting time on every push. The cost is a second `npm ci`.
+#
+# `verify:dist` is the size limit: it checks the budgets (ESM ≤ 6 KB gzip,
+# IIFE ≤ 7 KB gzip), the maps, the tarball contents and the published-type
+# contract. A separate plugin for size is not needed: the check is already written
+# and already catches more.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Both jobs only read the repository: nothing here writes to it, so no job needs
+# more than the read token. The default token carries more than that.
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: types, lint, unit tests, built package
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test:unit
+      - run: npm run build
+      - name: Budgets, maps and package contents
+        run: npm run verify:dist
+      # The README against the built types and the runtime source. It reads
+      # dist/*.d.ts, so it runs after the build; it has nothing to do with size and
+      # takes seconds.
+      - name: The README describes the real API and the real defaults
+        run: npm run verify:docs
+
+  e2e:
+    name: e2e — chromium, firefox, webkit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Playwright browsers with system dependencies
+        run: npx playwright install --with-deps chromium firefox webkit
+      # Six checks in the dist block bring up a page that imports dist/index.js:
+      # without a build they will not pass, and the runner will say so directly.
+      - run: npm run build
+      # The colon in the step name is quoted: without quotes YAML reads "Smoke:" as
+      # a nested key-value pair and the whole file stops being valid.
+      - name: 'Smoke: DPR=1 — full matrix'
+        run: npm run smoke
+      # A separate HiDPI profile: the same runner, a critical subset of the checks
+      # (see the profile note in the run and tests/smoke/BASELINE.md). The full
+      # matrix is not run at DPR=2: scale-independent checks would be duplicated.
+      - name: 'Smoke: DPR=2 — critical subset'
+        run: SMOKE_DPR=2 npm run smoke
+      # The artifact is what is needed to investigate a failure, not an archive of
+      # runs. Dated files in out/ are no longer committed.
+      - name: Run results (on failure)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: smoke-results
+          path: tests/smoke/out/results-*.json
+          if-no-files-found: warn
+
+  # Framework example check (examples/) — release validation, not an everyday
+  # gate: React, Vue and Next are downloaded here (for Next that is hundreds of
+  # megabytes) and a real `next build` is run. Hence a separate job: the base
+  # checks must not wait for this install, and an example failure must not look
+  # like a library failure. The npm cache covers all four lock files, including
+  # the examples' lock files: without them every run would download Next again.
+  #
+  # Chromium only: the examples verify framework integration rather than engine
+  # behaviour — the engines are the e2e job's concern.
+  examples:
+    name: examples — vanilla, React, Vue, Next
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            examples/*/package-lock.json
+      - run: npm ci
+      # The examples link the built package (`file:../..`), so a build is needed.
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check:examples
+      - name: Examples check results (on failure)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: examples-results
+          path: tests/examples/out/results-*.json
+          if-no-files-found: warn

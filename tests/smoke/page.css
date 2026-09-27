@@ -1,0 +1,167 @@
+/* Test page styles — a separate file, not in <style>:
+   under strict CSP inline styles are forbidden, and the page is obliged to be an
+   example of this. A library that "works under CSP" on a page with <style>
+   proves nothing. */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  transform-origin: 0 0;
+}
+
+body {
+  margin: 0;
+  font:
+    15px/1.5 system-ui,
+    sans-serif;
+  color: #16202a;
+  background: #fff;
+}
+
+main {
+  padding: 24px 0 0 24px;
+}
+h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+p {
+  max-width: 760px;
+}
+
+/* Probe: several saturated colors so the inversion of each channel is noticeable,
+   not "white on white". */
+.probe {
+  width: 360px;
+  height: 240px;
+  background:
+    linear-gradient(90deg, #ff2d00 0 25%, #ffd400 25% 50%, #00a651 50% 75%, #0033cc 75% 100%), #7a4bff;
+  border: 0;
+  color: #000;
+}
+
+.outside {
+  width: 360px;
+  height: 240px;
+  background: #f0f3f7;
+  color: #16202a;
+}
+
+.row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.selectable {
+  margin-top: 24px;
+  width: 700px;
+  font-size: 18px;
+  user-select: text;
+}
+
+#click-target {
+  margin-top: 24px;
+  font: inherit;
+  padding: 8px 16px;
+}
+
+.surface {
+  margin-top: 24px;
+  width: 420px;
+  padding: 32px 16px;
+  background: #dfe7ef;
+  border: 1px dashed #8fa3b8;
+}
+
+.tall {
+  height: 2600px;
+}
+
+dialog {
+  border: 1px solid #8fa3b8;
+  padding: 16px;
+}
+
+/* Site popovers: the position is set rigidly and completely (margin and
+   right/bottom reset). Not on a whim: the UA table for [popover] sets `inset: 0`
+   and `margin: auto` — if only left/top are set, the box is centered, and the
+   measured geometry would not be the one recorded in the test. An opaque
+   background is mandatory: the inversion of a translucent rectangle cannot be
+   seen pixel by pixel. */
+#site-popover,
+#site-popover-2 {
+  margin: 0;
+  right: auto;
+  bottom: auto;
+  padding: 8px;
+  border: 0;
+  color: #fff;
+  font:
+    14px/1.2 system-ui,
+    sans-serif;
+}
+#site-popover {
+  position: fixed;
+  left: 40px;
+  top: 60px;
+  width: 220px;
+  height: 140px;
+  background: #ff2d00;
+}
+/* Overlap with the first — 100×60 px: it is exactly what makes the "who is above
+   whom" check possible (in the overlap you can see whose pixels won). */
+#site-popover-2 {
+  position: fixed;
+  left: 160px;
+  top: 140px;
+  width: 220px;
+  height: 140px;
+  background: #0033cc;
+}
+
+.fullscreen-target {
+  margin-top: 24px;
+  width: 420px;
+  height: 200px;
+  background: #00a651;
+  color: #fff;
+  padding: 12px;
+}
+
+#fullscreen-button {
+  margin-top: 12px;
+  font: inherit;
+  padding: 8px 16px;
+}
+
+/* Hostile roots. We take the three on which legacy mounting broke with a
+   measured result, to check that the top layer does not notice them. */
+html.root-html-transform-scale {
+  transform: scale(1.25);
+}
+html.root-html-transform-translate {
+  transform: translate(40px, 20px);
+}
+html.root-html-transform-rotate {
+  transform: rotate(1deg);
+}
+body.root-body-opacity-50 {
+  opacity: 0.5;
+}
+body.root-body-filter-blur {
+  filter: blur(2px);
+}
+
+/* Case "pos-fixed-maxz": content on top of everything. The probe moves to the
+   bottom-right corner and gets the maximum z-index — this checks that the top
+   layer does not depend on the page's z-index (unlike legacy `fixed`, where this
+   case had 0/5760 matches). */
+body.root-pos-fixed-maxz #probe {
+  position: fixed;
+  left: 620px;
+  top: 320px;
+  z-index: 2147483647;
+}

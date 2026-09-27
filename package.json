@@ -1,0 +1,86 @@
+{
+  "name": "visual-region",
+  "version": "0.1.0",
+  "description": "Drag a region over any page and visually alter only what is inside it. Zero runtime dependencies, framework-agnostic.",
+  "keywords": [
+    "region",
+    "invert",
+    "dark-mode",
+    "mix-blend-mode",
+    "popover",
+    "vanilla-js",
+    "no-dependencies"
+  ],
+  "license": "MIT",
+  "author": "NEY_verty",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ney-verty/visual-region.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ney-verty/visual-region/issues"
+  },
+  "homepage": "https://github.com/Ney-verty/visual-region#readme",
+  "type": "module",
+  "sideEffects": [
+    "./src/auto.ts",
+    "./src/cdn.ts",
+    "./dist/auto.js",
+    "./dist/auto.cjs",
+    "./dist/visual-region.global.js"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/visual-region.global.js",
+  "jsdelivr": "./dist/visual-region.global.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./auto": {
+      "types": "./dist/auto.d.ts",
+      "import": "./dist/auto.js",
+      "require": "./dist/auto.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
+    "lint": "eslint src tests scripts demo",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "tsup && node scripts/normalize-sourcemaps.mjs && tsc -p tsconfig.build.json",
+    "build:js": "tsc --outDir .tmp-build --declaration false --declarationMap false",
+    "verify:dist": "node scripts/verify-dist.mjs",
+    "verify:docs": "node scripts/verify-docs.mjs",
+    "shot:readme": "node scripts/make-readme-shot.mjs",
+    "test:unit": "vitest run",
+    "smoke": "node tests/smoke/run.mjs",
+    "demo": "npm run build && node scripts/serve-demo.mjs",
+    "demo:site": "npm run build && node scripts/build-demo-site.mjs && node scripts/serve-demo.mjs _site",
+    "check:examples": "node tests/examples/run.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "esbuild": "0.27.7",
+    "eslint": "10.11.0",
+    "eslint-config-prettier": "10.1.8",
+    "playwright": "1.63.0",
+    "prettier": "3.9.9",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "4.1.11"
+  }
+}
