@@ -7,10 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 API is frozen per minor version: within `0.1.x` names, signatures and semantics do not change; a
 breaking change bumps the minor version.
 
-## [0.1.0] — not published
+## [0.1.0] — 2026-10-11
 
-**This version has not been published to npm.** The package name `visual-region` has not been
-reserved. Everything below is the state of the source tree at this version.
+**Released 2026-10-11.** Published to npm as `visual-region@0.1.0`; this version's source is tagged
+`v0.1.0`. Everything below is the state of the source tree at this version.
 
 ### Added
 
@@ -31,7 +31,7 @@ reserved. Everything below is the state of the source tree at this version.
 - **Touch input as an explicit opt-in** (`touch: 'surface'`), with `touch-action` set on the surface
   when the instance is enabled and restored when it is disabled.
 - **Examples** for vanilla, React, Vue and Next.js, each connecting the library by package name.
-- **A demo playground**, prepared for GitHub Pages.
+- **A demo playground**, published to GitHub Pages at <https://ney-verty.github.io/visual-region/>.
 - **Runtime diagnostics in English**, including the `reason` payloads of `unsupported` and
   `lost-top-layer`. They are written to be read by a person and are not a stable machine-readable
   identifier — the README states the rule, and v0.1 exposes no field for classifying why a region
@@ -52,3 +52,6 @@ Measured, not asserted — details and numbers in [README.md](README.md) and
 Listed in full under [Known limitations](README.md#known-limitations) in the README. The two worth
 repeating here: Safari is **not** confirmed (Linux WebKit is not a Safari result), and a region is
 anchored to the viewport rather than to the document.
+
+Real-device Safari/iOS validation was not performed for v0.1.0. This is an accepted validation gap
+for this version, not a found defect and not a release blocker.

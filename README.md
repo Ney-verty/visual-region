@@ -14,8 +14,8 @@ pixels underneath it as a colour negative.
 - ESM, CommonJS and a `<script>` build; TypeScript types included;
 - requires the Popover API (feature-detected, never user-agent sniffed) — see
   [Browser support](#browser-support);
-- v0.1 is **not published yet**. The public API below is frozen for v0.1: names, signatures and
-  semantics will not change before the release.
+- v0.1.0 is released (2026-10-11) — see [CHANGELOG.md](CHANGELOG.md). The public API below is frozen
+  for v0.1: within `0.1.x`, names, signatures and semantics do not change.
 
 ## Install
 
@@ -46,9 +46,9 @@ The IIFE build is served by any static host, and any CDN that mirrors npm will f
 </script>
 ```
 
-`visual-region@0.1.0` is the shape of the URL once the package is published; use whatever URL your
-host or CDN gives you. A `<script>` tag is the one case where the library initializes marked-up
-elements on its own — connecting it that way is already a statement that it may act by itself.
+`@0.1.0` in that URL is the published version; use whatever URL your host or CDN gives you. A
+`<script>` tag is the one case where the library initializes marked-up elements on its own —
+connecting it that way is already a statement that it may act by itself.
 `import`ing it is not: the main entry has no side effects.
 
 ## Quick start
@@ -414,7 +414,8 @@ gesture.
 What this does **not** say:
 
 - **Safari is not confirmed.** Linux WebKit is a different build of a related engine on a different
-  platform, and its results are not a Safari result. macOS and iOS Safari are not verified yet;
+  platform, and its results are not a Safari result. Real-device Safari/iOS validation was not
+  performed for v0.1.0 — macOS and iOS Safari are an accepted validation gap, not a checked result;
 - no minimum browser versions are claimed. The requirement is the Popover API, which is detected at
   runtime (no user-agent sniffing) — if it is present, the default mount works; if it is not,
   `supported` is `false` and nothing pretends otherwise. Without it, `mount: 'fixed'` is the explicit
@@ -442,10 +443,11 @@ warnings, and zero runtime dependencies is asserted next to them.
 
 ![The demo page with an active region: part of the paragraph and part of the bar chart inside the
 rectangle are inverted, while the rest of that same chart and the page around it keep their normal
-colours](assets/demo-invert.png)
+colours](https://raw.githubusercontent.com/Ney-verty/visual-region/v0.1.0/assets/demo-invert.png)
 
-<!-- Repository-relative on purpose: the image has to render on GitHub and in a working tree. It is not
-     part of the npm package — `files` is dist, README.md and LICENSE only. -->
+<!-- Absolute and tag-pinned on purpose: the image is not part of the npm package (`files` is dist,
+     README.md and LICENSE), so a repository-relative path has nothing to resolve against inside the
+     tarball. The tag makes the URL immutable and independent of later changes to the file. -->
 
 The screenshot above is the demo page with an active region: the rectangle covers part of the text
 and part of the bar chart, and the unfilled part of that same chart stays outside it, so the original
@@ -458,7 +460,7 @@ npm run demo:site   # the same page as a built static site
 
 The demo is a playground: a main drag scenario, a panel with the real options of v0.1, programmatic
 `setRegion()`, and a stress-test section (hostile roots, HiDPI, CSP) below the main playground.
-`.github/workflows/pages.yml` publishes it to GitHub Pages.
+`.github/workflows/pages.yml` publishes it to GitHub Pages: <https://ney-verty.github.io/visual-region/>.
 
 ## Available in v0.1
 
