@@ -37,6 +37,8 @@ describe('normalizeSpec: defaults', () => {
     expect(spec.shape.kind).toBe('rect');
     expect(spec.effect.kind).toBe('invert');
     expect(spec.renderer.kind).toBe('blend');
+    expect(spec.controller).toBe('drag');
+    expect(spec.followSize).toEqual({ width: 120, height: 120 });
   });
 
   it('the spec contains exactly the expected field set — a new option will not appear silently', () => {
@@ -44,7 +46,9 @@ describe('normalizeSpec: defaults', () => {
     // and forces a conscious decision about what it means.
     expect(Object.keys(normalizeSpec(undefined)).sort()).toEqual([
       'activation',
+      'controller',
       'effect',
+      'followSize',
       'interactionRoot',
       'modifier',
       'mountKind',
@@ -81,7 +85,15 @@ describe('normalizeSpec: loud errors', () => {
 
   const cases: Array<[string, () => unknown]> = [
     ['unknown effect', wrong({ effect: 'blur' })],
-    ['unknown shape', wrong({ shape: 'circle' })],
+    ['unknown shape', wrong({ shape: 'spotlight' })],
+    ['unknown controller', wrong({ controller: 'lasso' })],
+    ['followSize: zero', wrong({ followSize: 0 })],
+    ['followSize: negative', wrong({ followSize: -5 })],
+    ['followSize: NaN', wrong({ followSize: Number.NaN })],
+    ['followSize: Infinity', wrong({ followSize: Number.POSITIVE_INFINITY })],
+    ['followSize: a string', wrong({ followSize: '120' })],
+    ['followSize with a zero side', wrong({ followSize: { width: 120, height: 0 } })],
+    ['followSize with a missing side', wrong({ followSize: { width: 120 } })],
     ['unknown mount', wrong({ mount: 'fixed-like' })],
     ['unknown activation', wrong({ activation: 'hover' })],
     ['unknown touch', wrong({ touch: 'always' })],
@@ -115,6 +127,22 @@ describe('normalizeSpec: warnings instead of exceptions', () => {
     const spec = normalizeSpec({ activation: 'always', modifier: 'shift' });
     expect(spec.modifier).toBeNull();
     expect(warnings.join('\n')).toContain('modifier given');
+  });
+
+  it('followSize with controller:drag is a warning, not an error', () => {
+    // The spec has one shape, so the value is normalized and stored; it simply has no
+    // effect, and saying nothing about that would be a lie by omission.
+    const spec = normalizeSpec({ controller: 'drag', followSize: 240 });
+    expect(spec.followSize).toEqual({ width: 240, height: 240 });
+    expect(warnings.join('\n')).toContain("controller is 'drag'");
+  });
+
+  it('follow with activation:programmatic is a warning (the option does nothing)', () => {
+    // Not precedence: 'programmatic' means "no pointer controller at all", for follow too.
+    const spec = normalizeSpec({ controller: 'follow', activation: 'programmatic' });
+    expect(spec.controller).toBe('follow');
+    expect(spec.activation).toBe('programmatic');
+    expect(warnings.join('\n')).toContain('no pointer controller is attached');
   });
 
   it('the warning repeats once per key (warnOnce)', () => {
@@ -152,6 +180,29 @@ describe('normalizeSpec: boundary values are accepted', () => {
     const spec = normalizeSpec({ activation: 'element', surface });
     expect(spec.surface).toBe(surface);
     expect(spec.activation).toBe('element');
+  });
+
+  it('the round shapes reach the spec by name', () => {
+    expect(normalizeSpec({ shape: 'ellipse' }).shape.kind).toBe('ellipse');
+    expect(normalizeSpec({ shape: 'circle' }).shape.kind).toBe('circle');
+  });
+
+  it('followSize: a number is a square, an object is width × height', () => {
+    expect(normalizeSpec({ followSize: 240 }).followSize).toEqual({ width: 240, height: 240 });
+    expect(normalizeSpec({ followSize: { width: 240, height: 120 } }).followSize).toEqual({
+      width: 240,
+      height: 120,
+    });
+    // Fractions are legal: the grammar of the markup (§2 step 6.1) allows them too.
+    expect(normalizeSpec({ followSize: 120.5 }).followSize).toEqual({ width: 120.5, height: 120.5 });
+  });
+
+  it('the default followSize is a fresh object per spec, not a shared one', () => {
+    // A shared default would be one mutation away from changing every instance on the page.
+    const first = normalizeSpec(undefined).followSize;
+    const second = normalizeSpec(undefined).followSize;
+    expect(first).not.toBe(second);
+    expect(first).toEqual(second);
   });
 
   it('the renderer is chosen by capability, not by name', () => {

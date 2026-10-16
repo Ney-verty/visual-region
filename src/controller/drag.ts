@@ -20,7 +20,9 @@ export function createDragController(activation: Activation, threshold: number):
     attach(root: EventTarget, host: ControllerHost): void {
       tracker = createPointerTracker({
         root,
-        accepts: (event) => activation.accepts(event),
+        // A drag IS a press, so the press check lives here, not in the activation policy:
+        // the left button only, and exactly where it used to be — before preventDefault().
+        accepts: (event) => event.button === 0 && activation.accepts(event),
         threshold,
         onStart: () => {
           host.onStart();

@@ -338,7 +338,11 @@ check('setOptions: applies on the fly and keeps the region', () => {
 
 check('validation: configuration errors fail loudly (TypeError)', () => {
   const cases = [
-    [{ shape: 'circle' }, 'shape'],
+    /* The stale example replaced, not the expectation: this case is "an unknown shape
+       name is refused", and `circle` was only ever the name picked to be unknown. In
+       v0.2 it is a real shape (PLAN step 4), so the example had to move — the check
+       itself is untouched, and the positive side lives in the two `shapes:` checks. */
+    [{ shape: 'triangle' }, 'shape'],
     [{ effect: 'rainbow' }, 'effect'],
     [{ mount: 'portal' }, 'mount'],
     [{ activation: 'element' }, 'activation:element without surface'],
@@ -656,6 +660,62 @@ check('autoInit: the data-visual-region markup works', async () => {
   eq(started, 1, 'gesture on the marked-up surface');
 });
 
+check('autoInit: data-shape, data-controller and data-follow-size are read from the markup', async () => {
+  /* The page itself is not touched: this check builds its own container, so the count of
+     marked-up elements the other checks rely on (`found.length === 1`) stays what it is.
+     The element is removed again at the end. */
+  const host = document.createElement('div');
+  host.innerHTML =
+    '<div id="mr-valid" data-visual-region="invert" data-controller="follow" ' +
+    'data-activation="always" data-shape="circle" data-follow-size="120x80"></div>' +
+    '<div id="mr-invalid" data-visual-region="invert" data-controller="follow" ' +
+    'data-activation="always" data-follow-size="120 x 80"></div>';
+  document.body.appendChild(host);
+
+  const warnings = [];
+  const realWarn = console.warn;
+  console.warn = (...args) => {
+    warnings.push(args.map(String).join(' '));
+  };
+  let found;
+  try {
+    found = autoInit(host);
+  } finally {
+    console.warn = realWarn;
+  }
+  for (const vr of found) created.push(vr);
+
+  eq(found.length, 2, 'both marked-up elements were initialized');
+  eq(found[0].state, 'enabled', 'the valid one: state');
+
+  /* No pointerdown anywhere: `data-controller="follow"` really made a follow controller,
+     `data-shape="circle"` a circle and `data-follow-size="120x80"` a 120×80 box — which a
+     circle then fits to the 80×80 square it reports. */
+  move({ clientX: 400, clientY: 300 });
+  await frames(2);
+  const b = found[0].bounds;
+  eq(`${b.x},${b.y},${b.width},${b.height}`, '360,260,80,80', 'the followed circle from the markup');
+  const clip = getComputedStyle(found[0].element).clipPath;
+  assert(clip.includes('path('), 'the silhouette from the markup: ' + clip);
+
+  /* The invalid size warns (the message names the attribute, so a page author can find it)
+     and leaves the default 120 in place; the element still initializes. */
+  eq(found[1].state, 'enabled', 'the invalid one: state');
+  const warned = warnings.filter((line) => line.includes('data-follow-size'));
+  eq(warned.length, 1, 'a single warning for the invalid grammar: ' + JSON.stringify(warnings));
+  const d = found[1].bounds;
+  eq(`${d.width},${d.height}`, '120,120', 'the default size is used instead');
+
+  /* Destroyed here rather than left to destroyAll(): the assertion below is about the page's own
+     markup, and it has to hold now, not two checks later. */
+  for (const vr of found) {
+    vr.destroy();
+    created.splice(created.indexOf(vr), 1);
+  }
+  host.remove();
+  eq(document.querySelectorAll('[data-visual-region]').length, 1, 'the page has its own markup back');
+});
+
 check('CSP: there are no library violations in the journal', () => {
   eq(violations.length, 0, 'securitypolicyviolation: ' + JSON.stringify(violations.slice(0, 3)));
   return 'the violation journal is empty (auxiliary signal — see the positive control in the runner)';
@@ -683,6 +743,183 @@ check('events: the region is reused after a series of gestures', async () => {
   eq(ends, 3, 'number of completed gestures');
   eq(vr.state, 'enabled', 'state');
   assert(vr.element && vr.element.matches(':popover-open'), 'the layer is still in the top layer');
+});
+
+/* ------------------------------------------------------- v0.2: shapes ---- */
+
+check('shapes: a programmatic circle reports the fitted square, not the requested box', async () => {
+  const vr = track(visualRegion({ shape: 'circle' }));
+  const seen = [];
+  vr.on('change', ({ bounds }) => seen.push(bounds));
+  vr.setRegion({ x: 100, y: 100, width: 300, height: 200 });
+  await frames(2);
+  const b = vr.bounds;
+  eq(b.x, 150, 'centred horizontally: x');
+  eq(b.y, 100, 'the smaller side decides: y');
+  eq(b.width, 200, 'the diameter is the smaller side: width');
+  eq(b.height, 200, 'the reported box is a square: height');
+  eq(seen.length, 1, 'one change per setRegion call');
+  eq(seen[0].width, 200, 'and the change payload carries the fitted box');
+  /* The layer itself, measured in the engine, not reconstructed from our own numbers. */
+  const rect = rectOf(vr.element);
+  near(rect.x, 150, 0.5, 'the layer sits where the fitted box says: x');
+  near(rect.y, 100, 0.5, 'y');
+  near(rect.width, 200, 0.5, 'the layer is the fitted square: width');
+  near(rect.height, 200, 0.5, 'height');
+  vr.clearRegion();
+});
+
+check('shapes: an ellipse fills the requested box exactly', async () => {
+  const vr = track(visualRegion({ shape: 'ellipse' }));
+  vr.setRegion({ x: 100, y: 100, width: 300, height: 200 });
+  await frames(2);
+  const b = vr.bounds;
+  eq(`${b.x},${b.y},${b.width},${b.height}`, '100,100,300,200', 'the ellipse is the identity on the box');
+  const rect = rectOf(vr.element);
+  near(rect.width, 300, 0.5, 'the layer keeps the requested size');
+  near(rect.height, 200, 0.5, 'and both sides of it');
+  vr.clearRegion();
+});
+
+/* -------------------------------------------------- v0.2: follow (3.1) --- */
+
+check('follow: a pointer move opens the region, with no press at all', async () => {
+  const vr = track(visualRegion({ controller: 'follow', activation: 'always' }));
+  const order = [];
+  vr.on('start', (p) => order.push(`start:${p.source}`));
+  vr.on('change', () => order.push('change'));
+  vr.on('end', () => order.push('end'));
+  eq(getComputedStyle(vr.element).visibility, 'hidden', 'nothing is shown before a move');
+
+  move({ clientX: 400, clientY: 300 }); // no pointerdown anywhere
+  await frames(2);
+  eq(order[0], 'start:pointer', 'the accepted move itself opens the session');
+  eq(getComputedStyle(vr.element).visibility, 'visible', 'and the region is on screen');
+  const b = vr.bounds;
+  eq(
+    `${b.x},${b.y},${b.width},${b.height}`,
+    '340,240,120,120',
+    'the default 120 square, centred on the pointer',
+  );
+
+  /* A follow is not bounded by a press, so a release must not close it. */
+  up({ clientX: 400, clientY: 300 });
+  await frames(2);
+  eq(order.filter((e) => e === 'end').length, 0, 'a mouse release does not end a follow');
+  eq(getComputedStyle(vr.element).visibility, 'visible', 'the region is still there');
+
+  pointer('pointerout', window, { relatedTarget: null });
+  await frames(2);
+  eq(order[order.length - 1], 'end', 'leaving the document does end it');
+  eq(getComputedStyle(vr.element).visibility, 'hidden', 'and the region goes away');
+});
+
+check('follow: five moves inside one frame give one write, and the last point wins', async () => {
+  const vr = track(visualRegion({ controller: 'follow', activation: 'always' }));
+  let changes = 0;
+  let last = null;
+  vr.on('change', ({ bounds }) => {
+    changes++;
+    last = bounds;
+  });
+  for (let i = 0; i < 5; i++) move({ clientX: 200 + i, clientY: 200 });
+  await frames(2);
+  eq(changes, 1, 'writes per frame');
+  assert(last, 'a change has arrived');
+  eq(last.x, 204 - 60, 'the last point of the frame wins');
+});
+
+check('follow: losing the right is a normal end, and holding it again starts a new session', async () => {
+  const vr = track(visualRegion({ controller: 'follow', activation: 'modifier' }));
+  const order = [];
+  vr.on('start', () => order.push('start'));
+  vr.on('end', () => order.push('end'));
+  vr.on('cancel', () => order.push('cancel'));
+
+  move({ altKey: true, clientX: 300, clientY: 300 });
+  await frames(2);
+  move({ altKey: false, clientX: 340, clientY: 300 });
+  await frames(2);
+  eq(order.join(','), 'start,end', 'the right was lost, not the region: end, not cancel');
+  eq(getComputedStyle(vr.element).visibility, 'hidden', 'a non-persistent region is cleared');
+
+  move({ altKey: true, clientX: 400, clientY: 300 });
+  await frames(2);
+  eq(order.filter((e) => e === 'start').length, 2, 'holding the key again is a NEW session');
+});
+
+check('follow: leaving the allowed surface ends the session', async () => {
+  const surface = document.getElementById('surface');
+  const vr = track(visualRegion({ controller: 'follow', activation: 'element', surface }));
+  const order = [];
+  vr.on('start', () => order.push('start'));
+  vr.on('end', () => order.push('end'));
+  /* The move is dispatched ON the surface: the follow controller really does look at
+     the target of every event, which is exactly what is being checked here. */
+  pointer('pointermove', surface, { clientX: 300, clientY: 300 });
+  await frames(2);
+  eq(order.join(','), 'start', 'inside the surface the session opens');
+  pointer('pointermove', document.body, { clientX: 900, clientY: 600 });
+  await frames(2);
+  eq(order.join(','), 'start,end', 'outside it the session ends');
+});
+
+check('follow: a touch release ends the session — the contact is over', async () => {
+  const surface = document.getElementById('touch-surface');
+  const vr = track(visualRegion({ controller: 'follow', activation: 'element', surface, touch: 'surface' }));
+  const order = [];
+  vr.on('start', () => order.push('start'));
+  vr.on('end', () => order.push('end'));
+  pointer('pointermove', surface, { pointerType: 'touch', clientX: 300, clientY: 300 });
+  await frames(2);
+  eq(order.join(','), 'start', 'a touch move opens it');
+  up({ pointerType: 'touch', clientX: 300, clientY: 300 });
+  await frames(2);
+  eq(order.join(','), 'start,end', 'the release closes it: for touch this is the end of the contact');
+});
+
+check('follow: persistent keeps the last geometry after the end', async () => {
+  const vr = track(visualRegion({ controller: 'follow', activation: 'always', persistent: true }));
+  move({ clientX: 500, clientY: 300 });
+  await frames(2);
+  const kept = vr.bounds;
+  pointer('pointerout', window, { relatedTarget: null });
+  await frames(2);
+  eq(getComputedStyle(vr.element).visibility, 'visible', 'kept after the session ended');
+  eq(vr.bounds.x, kept.x, 'the last geometry, not an empty one');
+  move({ clientX: 140, clientY: 140 });
+  await frames(2);
+  eq(vr.bounds.x, 140 - 60, 'the next accepted move resumes following');
+  vr.clearRegion();
+  await frames(2);
+  eq(getComputedStyle(vr.element).visibility, 'hidden', 'clearRegion removes it');
+});
+
+check('follow: a cancel does not leave the region, even with persistent', async () => {
+  const vr = track(visualRegion({ controller: 'follow', activation: 'always', persistent: true }));
+  move({ clientX: 300, clientY: 300 });
+  await frames(2);
+  eq(getComputedStyle(vr.element).visibility, 'visible', 'shown while following');
+  pointer('pointercancel', window, { clientX: 300, clientY: 300 });
+  await frames(2);
+  eq(getComputedStyle(vr.element).visibility, 'hidden', 'a cancel never leaves the region behind');
+});
+
+check('follow: while a programmatic region is shown, the pointer does not replace it', async () => {
+  const vr = track(visualRegion({ controller: 'follow', activation: 'always' }));
+  vr.setRegion({ x: 40, y: 40, width: 200, height: 100 });
+  await frames(2);
+  let changes = 0;
+  vr.on('change', () => changes++);
+  move({ clientX: 600, clientY: 400 });
+  await frames(2);
+  eq(changes, 0, 'no geometry writes while the programmatic region is shown');
+  eq(vr.bounds.x, 40, 'the geometry the page set is untouched');
+  vr.clearRegion();
+  move({ clientX: 620, clientY: 400 });
+  await frames(2);
+  eq(changes, 1, 'clearRegion hands the geometry back to the controller');
+  eq(vr.bounds.x, 620 - 60, 'and the pointer geometry is applied');
 });
 
 /* ------------------------------------------------ scenes for the runner ---- */

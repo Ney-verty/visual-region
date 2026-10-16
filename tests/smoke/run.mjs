@@ -195,6 +195,168 @@ async function loadPlaywright() {
   }
 }
 
+/* --------------------------------------- pixels: shape silhouettes ----- */
+
+/*
+ * The round shapes, checked where only pixels can check them.
+ *
+ * The geometry half of the contract — "a circle reports the square it really
+ * occupies" — is pinned by the in-page battery, which compares the reported box
+ * with an independently computed one. Here the question is the other half: does
+ * the SILHOUETTE clip the effect at all, and does it clip it where the shape says.
+ *
+ * The numbers below are the test's own expectation, computed from the requested
+ * box, never read back from the library:
+ *   ellipse — fills its box, so ≈ π/4 of the box is inverted and the four corners
+ *             of the box are NOT (an inscribed ellipse misses them by ~13% of the
+ *             radius, which at this size is ~15 px — far from any antialiasing);
+ *   circle  — the largest circle the box allows, i.e. the square it reports.
+ * A missing `clip-path` shows up immediately as ratio ≈ 1.0 instead of ≈ 0.785.
+ */
+function fitSquare(box) {
+  const side = Math.min(box.width, box.height);
+  return {
+    x: box.x + (box.width - side) / 2,
+    y: box.y + (box.height - side) / 2,
+    width: side,
+    height: side,
+  };
+}
+
+async function shapeChecks(page, decoder, url, report) {
+  await page.goto(url);
+  await page.waitForFunction(() => window.__suite && window.__suite.ready, null, { timeout: 20000 });
+
+  const geo = await page.evaluate(() => {
+    const vp = { width: innerWidth, height: innerHeight };
+    const r = window.__suite.probeRect();
+    const x = Math.max(0, r.x + 8);
+    const y = Math.max(0, r.y + 8);
+    const x1 = Math.min(vp.width, r.x + r.width - 8);
+    const y1 = Math.min(vp.height, r.y + r.height - 8);
+    return {
+      requested: { x, y, width: Math.max(0, x1 - x), height: Math.max(0, y1 - y) },
+      outside: window.__suite.outsideRect(),
+    };
+  });
+
+  const requested = geo.requested;
+  if (requested.width < 40 || requested.height < 40) {
+    report.add('pixels [shapes]: the probe is on screen', false, JSON.stringify(requested));
+    return;
+  }
+  const clipOut = toClip(geo.outside);
+
+  for (const shape of ['ellipse', 'circle']) {
+    /* The box the shape must occupy, computed here: for the circle — the largest
+       square the requested box allows, centred in it. It is deliberately not what
+       the library reports (that is `state.rect`, compared below). */
+    const fitted = shape === 'circle' ? fitSquare(requested) : requested;
+    const clip = toClip(fitted);
+    if (clip === null) {
+      report.add(`pixels [${shape}]: the region is inside the viewport`, false, JSON.stringify(fitted));
+      continue;
+    }
+
+    const m = 0.1; // the corner sample: 0.1 of each side of the fitted box
+    const corners = [
+      ['corner top-left', fitted.x, fitted.y],
+      ['corner top-right', fitted.x + fitted.width * (1 - m), fitted.y],
+      ['corner bottom-left', fitted.x, fitted.y + fitted.height * (1 - m)],
+      ['corner bottom-right', fitted.x + fitted.width * (1 - m), fitted.y + fitted.height * (1 - m)],
+    ].map(([label, x, y]) => ({ label, x, y, width: fitted.width * m, height: fitted.height * m }));
+
+    /* A centred box of 0.6 of each side: its corners sit at 0.85 of the radius, so
+       it is well inside the inscribed ellipse of the fitted box. */
+    const centre = {
+      x: fitted.x + fitted.width * 0.2,
+      y: fitted.y + fitted.height * 0.2,
+      width: fitted.width * 0.6,
+      height: fitted.height * 0.6,
+    };
+
+    await page.evaluate(() => window.__suite.scene.hide());
+    await settle(page);
+    const before = await shot(page, clip);
+    const beforeOut = await shot(page, clipOut);
+
+    await page.evaluate(({ box, kind }) => window.__suite.scene.show(box, { shape: kind }), {
+      box: requested,
+      kind: shape,
+    });
+    await settle(page);
+    const state = await page.evaluate(() => window.__suite.scene.state());
+    const after = await shot(page, clip);
+    const afterOut = await shot(page, clipOut);
+    await page.evaluate(() => window.__suite.scene.hide());
+
+    const inside = await compare(decoder, before, after, {
+      boxes: [
+        { label: 'inside the silhouette', ...insetInClip(centre, clip, 0.2), mode: 'complement' },
+        ...corners.map((c) => ({ label: c.label, ...insetInClip(c, clip, 0), mode: 'unchanged' })),
+      ],
+      region: imgRect(clip),
+      tol: TOL,
+    });
+
+    const box = inside.boxes[0];
+    const ratio = inside.region.ratio;
+    const cornersOk = inside.boxes.slice(1).every((b) => b.ok);
+
+    report.add(
+      `pixels [${shape}]: the effect is inverted inside the silhouette`,
+      box && box.ok,
+      box && box.ok
+        ? `errMax=${box.errMax}`
+        : `before=[${box && box.before}] after=[${box && box.after}] expected=[${box && box.expected}]`,
+    );
+    report.add(
+      `pixels [${shape}]: the silhouette clips the effect (≈ π/4 of the fitted box)`,
+      ratio >= 0.72 && ratio <= 0.84,
+      `ratio=${ratio}, strict=${inside.region.strictRatio}, fitted=${Math.round(fitted.width)}×${Math.round(fitted.height)}` +
+        ` at (${Math.round(fitted.x)},${Math.round(fitted.y)})`,
+    );
+    report.add(
+      `pixels [${shape}]: the corners of the box are outside the silhouette`,
+      cornersOk,
+      cornersOk
+        ? `4 boxes, errMax=${Math.max(...inside.boxes.slice(1).map((b) => b.errMax || 0))}`
+        : JSON.stringify(inside.boxes.slice(1).filter((b) => !b.ok)),
+    );
+    report.add(
+      `pixels [${shape}]: the layer occupies exactly the box the shape reports`,
+      state !== null &&
+        state.visibility === 'visible' &&
+        state.topLayer === true &&
+        Math.abs(state.rect.x - fitted.x) <= 0.5 &&
+        Math.abs(state.rect.y - fitted.y) <= 0.5 &&
+        Math.abs(state.rect.width - fitted.width) <= 0.5 &&
+        Math.abs(state.rect.height - fitted.height) <= 0.5,
+      state === null
+        ? 'no layer'
+        : `topLayer=${state.topLayer}, visibility=${state.visibility}, Δ=${JSON.stringify({
+            x: +(state.rect.x - fitted.x).toFixed(2),
+            y: +(state.rect.y - fitted.y).toFixed(2),
+            w: +(state.rect.width - fitted.width).toFixed(2),
+            h: +(state.rect.height - fitted.height).toFixed(2),
+          })}`,
+    );
+
+    if (clipOut !== null) {
+      const outside = await compare(decoder, beforeOut, afterOut, {
+        boxes: [{ label: 'outside', ...insetInClip(geo.outside, clipOut, 0.25), mode: 'unchanged' }],
+        tol: TOL,
+      });
+      const o = outside.boxes[0];
+      report.add(
+        `pixels [${shape}]: nothing changed outside the shape's box`,
+        o.ok,
+        o.ok ? `errMax=${o.errMax}` : `before=[${o.before}] after=[${o.after}]`,
+      );
+    }
+  }
+}
+
 /* --------------------------------------------- 0. static scan -------- */
 
 const FORBIDDEN = [
@@ -678,7 +840,8 @@ async function runBrowser(report, browsers, name, origin) {
     report.note(
       'HiDPI profile',
       `deviceScaleFactor=${DPR}: the battery, mandatory roots, input, ` +
-        '::backdrop, gestures, destroy mid-gesture, enable hygiene, top layer (DOM), dist and CSP (dist) run; ' +
+        '::backdrop, gestures, destroy mid-gesture, enable hygiene, the silhouette pixels of the ' +
+        'shapes, top layer (DOM), dist and CSP (dist) run; ' +
         'NOT run: observational roots, pixel top-layer scenarios, ' +
         'CSP battery of the sources page, legacy mount, performance',
     );
@@ -726,6 +889,13 @@ async function runBrowser(report, browsers, name, origin) {
     } catch (error) {
       report.add(`pixels [${root.id}]`, false, String(error.message || error));
     }
+  }
+
+  /* --- B2. pixels: the silhouettes of the round shapes --- */
+  try {
+    await shapeChecks(page, decoder, url, report);
+  } catch (error) {
+    report.add('pixels [shapes]', false, String(error.message || error));
   }
 
   /* --- C. pass-through with real input --- */

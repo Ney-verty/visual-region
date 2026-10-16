@@ -21,8 +21,14 @@ export interface Activation {
   /** Whether we listen for pointer events at all. For 'programmatic' — no. */
   readonly listens: boolean;
   /**
-   * Whether this pointerdown may start a region. It changes nothing in the event:
+   * Whether this pointer event may produce region geometry. It changes nothing in the event:
    * preventDefault is the caller's job, and only after an affirmative answer.
+   *
+   * Which button was pressed is deliberately NOT part of this predicate: pressing is the
+   * mechanics of a gesture, and only one controller (drag) has a press at all. See
+   * controller/drag.ts. What is checked here is the right to act: is this the primary pointer,
+   * is touch allowed here and is the gesture not going to be taken away by the browser, and
+   * does the modifier/surface policy admit it.
    */
   accepts(event: PointerEvent): boolean;
 }
@@ -77,8 +83,7 @@ export function createActivation(config: ActivationConfig): Activation {
   }
 
   const accepts = (event: PointerEvent): boolean => {
-    if (event.isPrimary !== true) return false; // multitouch and secondary buttons are out
-    if (event.button !== 0) return false; // right/middle button — not our gesture
+    if (event.isPrimary !== true) return false; // a second finger is not the pointer we follow
 
     if (event.pointerType === 'touch') {
       if (touch !== 'surface' || surface === null) return false;

@@ -2,9 +2,11 @@ import type { Bounds } from './region/types.js';
 import type { EventPayloads, VisualRegionOptions, VisualRegionState } from './core/types.js';
 import type { Unsubscribe } from './core/events.js';
 import type { ActivationKind, ModifierKey, TouchMode } from './interaction/activation.js';
+import type { FollowSize } from './controller/types.js';
 import type { MountKind } from './core/types.js';
 import { Engine } from './core/engine.js';
-import { normalizeSpec } from './core/spec.js';
+import { CONTROLLERS, normalizeSpec } from './core/spec.js';
+import { shapeKinds } from './core/registry.js';
 import { popoverApiAvailable } from './mount/capability.js';
 import { isBrowser } from './util/env.js';
 import { warnOnce } from './util/warn.js';
@@ -136,6 +138,38 @@ const TOUCH_MODES: readonly TouchMode[] = ['off', 'surface'];
 const MOUNTS: readonly MountKind[] = ['top-layer', 'fixed'];
 const MODIFIER_KEYS: readonly ModifierKey[] = ['alt', 'shift', 'ctrl', 'meta'];
 
+/** The shape names, taken from the registry rather than from a second copy of the list. */
+type ShapeName = NonNullable<VisualRegionOptions['shape']>;
+
+/**
+ * `data-follow-size`: one number (a square) or two separated by a lowercase `x`, with no spaces —
+ * `"120"`, `"120x80"`, `"120.5x80"`. Zero and negative values are refused here as well as in the
+ * spec (spec.ts `positiveSide`), because markup has the same right to a clear answer as
+ * JavaScript does.
+ */
+const FOLLOW_SIZE_SIDE = /^\d+(\.\d+)?$/;
+const FOLLOW_SIZE_PAIR = /^\d+(\.\d+)?x\d+(\.\d+)?$/;
+
+function readFollowSize(value: string | undefined): number | FollowSize | undefined {
+  if (value === undefined) return undefined;
+  if (FOLLOW_SIZE_SIDE.test(value)) {
+    const side = Number(value);
+    if (side > 0) return side;
+  } else if (FOLLOW_SIZE_PAIR.test(value)) {
+    const [w, h] = value.split('x');
+    const width = Number(w);
+    const height = Number(h);
+    if (width > 0 && height > 0) return { width, height };
+  }
+  /* Not thrown: the element still initializes, on the default size. The shape of the mistake is
+     named in the message, so the page can be fixed without reading the source. */
+  warnOnce(
+    'data-follow-size-invalid',
+    `data-follow-size="${value}": expected a positive number ("120") or a pair ("120x80") — using the default`,
+  );
+  return undefined;
+}
+
 function readEnum<T extends string>(
   value: string | undefined,
   allowed: readonly T[],
@@ -189,6 +223,17 @@ function optionsFromData(el: HTMLElement): VisualRegionOptions | null {
 
   const activation = readEnum(data['activation'], ACTIVATIONS, 'activation');
   if (activation !== undefined) options.activation = activation;
+
+  const controller = readEnum(data['controller'], CONTROLLERS, 'controller');
+  if (controller !== undefined) options.controller = controller;
+
+  /* `as readonly ShapeName[]`: the registry owns the list, the type owns the union, and the two
+     are kept in step by the runtime lookup in normalizeSpec, which refuses an unknown name. */
+  const shape = readEnum(data['shape'], shapeKinds() as readonly ShapeName[], 'shape');
+  if (shape !== undefined) options.shape = shape;
+
+  const followSize = readFollowSize(data['followSize']);
+  if (followSize !== undefined) options.followSize = followSize;
 
   const modifier = data['modifier'];
   if (modifier !== undefined) {

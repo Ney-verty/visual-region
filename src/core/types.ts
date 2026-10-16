@@ -3,7 +3,7 @@ import type { Bounds } from '../region/types.js';
 import type { Effect } from '../effect/types.js';
 import type { RegionShape } from '../region/types.js';
 import type { Renderer } from '../render/types.js';
-import type { EndCause } from '../controller/types.js';
+import type { CancelCause, ControllerKind, FollowSize } from '../controller/types.js';
 
 /** How the layer is placed. `fixed` is legacy, only on explicit request. */
 export type MountKind = 'top-layer' | 'fixed';
@@ -21,7 +21,12 @@ export interface EventPayloads {
   start: { source: 'pointer' | 'programmatic' };
   change: { bounds: Bounds };
   end: { bounds: Bounds | null };
-  cancel: { reason: Exclude<EndCause, 'pointerup'> };
+  /**
+   * A session that ended in a cancellation, not a normal finish (see NormalEndCause).
+   * `CancelCause` keeps every internal normal-end name out of the public union, so adding one
+   * does not widen the published contract.
+   */
+  cancel: { reason: CancelCause };
   /** The `reason` is human-readable diagnostic text, not a stable identifier (see the README). */
   'lost-top-layer': { reason: string };
   /** The `reason` is human-readable diagnostic text, not a stable identifier (see the README). */
@@ -37,8 +42,16 @@ export interface EventPayloads {
 export interface VisualRegionOptions {
   /** The effect of the region. In v0.1 only 'invert' (decision 3). */
   effect?: 'invert' | undefined;
-  /** The shape of the region. In v0.1 only 'rect'. */
-  shape?: 'rect' | undefined;
+  /** The shape of the region: 'rect' (default), 'ellipse' or 'circle'. */
+  shape?: 'rect' | 'ellipse' | 'circle' | undefined;
+  /**
+   * How the region's geometry is produced. 'drag' by default: press, pull, release.
+   * 'follow' has no gesture at all — the region appears under the pointer while the
+   * activation right holds, and there is nothing to press. See the README.
+   */
+  controller?: ControllerKind | undefined;
+  /** The size of a followed region, in CSS px. 120 (a square) by default. Not used by 'drag'. */
+  followSize?: number | FollowSize | undefined;
   /** What starts the gesture. 'modifier' by default. */
   activation?: ActivationKind | undefined;
   /** The modifier for activation:'modifier'. 'alt' by default. */
@@ -67,6 +80,9 @@ export interface VisualRegionOptions {
  */
 export interface Spec {
   readonly activation: ActivationKind;
+  readonly controller: ControllerKind;
+  /** Normalized to width × height even for 'drag', where it is unused: the spec has one shape. */
+  readonly followSize: FollowSize;
   readonly modifier: ModifierSpec | null;
   readonly touch: TouchMode;
   readonly mountKind: MountKind;

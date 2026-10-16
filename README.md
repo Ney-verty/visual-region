@@ -86,6 +86,9 @@ value warns once and skips the element.
 | Attribute               | Same as option    | Value                                                 |
 | ----------------------- | ----------------- | ----------------------------------------------------- |
 | `data-visual-region`    | —                 | `"invert"` (required marker)                          |
+| `data-shape`            | `shape`           | `rect` \| `ellipse` \| `circle`                       |
+| `data-controller`       | `controller`      | `drag` \| `follow`                                    |
+| `data-follow-size`      | `followSize`      | `"120"` (a square) or `"120x80"`                      |
 | `data-activation`       | `activation`      | `modifier` \| `always` \| `element` \| `programmatic` |
 | `data-modifier`         | `modifier`        | comma-separated keys: `alt`, `shift`, `ctrl`, `meta`  |
 | `data-touch`            | `touch`           | `off` \| `surface`                                    |
@@ -99,6 +102,10 @@ value warns once and skips the element.
 Values are read leniently: an unknown keyword falls back to the default and warns once, rather than
 throwing — markup cannot be typed, and one bad attribute should not take the page down. In
 JavaScript the same mistakes throw (see [Validation](#validation)).
+
+`data-follow-size` is written as a number (`"120"`, a square) or as a pair with a lowercase `x` and
+no spaces (`"120x80"`). Anything else — `"120 x 80"`, `"120X80"`, `"0"`, `"big"` — warns once and
+leaves the default size in place; the element still initializes.
 
 If you would rather control the moment, call `autoInit(root?)` yourself — handy after a client-side
 route change:
@@ -130,18 +137,18 @@ build.
 
 ### `class VisualRegion`
 
-| Member              | Signature           | What it does                                                                                                              |
-| ------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `state`             | `VisualRegionState` | `idle` \| `enabled` \| `disabled` \| `unsupported` \| `destroyed`                                                         |
-| `bounds`            | `Bounds \| null`    | geometry of the region that is shown right now                                                                            |
-| `enable()`          | `boolean`           | starts listening and mounts the layer; `false` when the environment has no top layer, and the state becomes `unsupported` |
-| `disable()`         | `void`              | stops and puts the page back; the instance stays alive and can be enabled again                                           |
-| `destroy()`         | `void`              | removes everything and makes the instance permanently unusable; idempotent                                                |
-| `setOptions(patch)` | `void`              | merges options and re-applies them, validates eagerly                                                                     |
-| `setRegion(bounds)` | `boolean`           | shows a region without a gesture; `false` if the instance could not be enabled                                            |
-| `clearRegion()`     | `void`              | hides the region, whether it came from a gesture or from `setRegion()`                                                    |
-| `on(name, fn)`      | `Unsubscribe`       | subscribes to an event; the returned function unsubscribes                                                                |
-| `off(name, fn)`     | `void`              | unsubscribes a specific listener                                                                                          |
+| Member              | Signature           | What it does                                                                                                                |
+| ------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `state`             | `VisualRegionState` | `idle` \| `enabled` \| `disabled` \| `unsupported` \| `destroyed`                                                           |
+| `bounds`            | `Bounds \| null`    | geometry of the region that is shown right now — the box the shape really occupies, which for `circle` is the fitted square |
+| `enable()`          | `boolean`           | starts listening and mounts the layer; `false` when the environment has no top layer, and the state becomes `unsupported`   |
+| `disable()`         | `void`              | stops and puts the page back; the instance stays alive and can be enabled again                                             |
+| `destroy()`         | `void`              | removes everything and makes the instance permanently unusable; idempotent                                                  |
+| `setOptions(patch)` | `void`              | merges options and re-applies them, validates eagerly                                                                       |
+| `setRegion(bounds)` | `boolean`           | shows a region without a gesture; `false` if the instance could not be enabled                                              |
+| `clearRegion()`     | `void`              | hides the region, whether it came from a gesture or from `setRegion()`                                                      |
+| `on(name, fn)`      | `Unsubscribe`       | subscribes to an event; the returned function unsubscribes                                                                  |
+| `off(name, fn)`     | `void`              | unsubscribes a specific listener                                                                                            |
 
 A new instance enables itself: "created" means "working", unless you pass `disabled: true`. When the
 environment cannot show a region, creation still succeeds and `state` is `unsupported` — nothing is
@@ -152,20 +159,22 @@ broken, there is simply no honest way to draw the effect. `init()` saves you the
 
 Every option is optional and flat. Defaults are the values the instance actually uses:
 
-| Option            | Type                   | Default         | Meaning                                                                                               |
-| ----------------- | ---------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
-| `effect`          | `'invert'`             | `'invert'`      | what the region does; v0.1 has exactly one effect                                                     |
-| `shape`           | `'rect'`               | `'rect'`        | shape of the region; v0.1 has exactly one shape                                                       |
-| `activation`      | `ActivationKind`       | `'modifier'`    | who may start a gesture                                                                               |
-| `modifier`        | `ModifierSpec \| null` | `'alt'`         | key(s) for `activation: 'modifier'`; also accepts a predicate                                         |
-| `surface`         | `HTMLElement \| null`  | `null`          | the element the gesture belongs to; required by `activation: 'element'` and `touch: 'surface'`        |
-| `interactionRoot` | `EventTarget \| null`  | `document.body` | where `pointerdown` is listened for, in the capture phase; `pointermove`/`up`/`cancel` go on `window` |
-| `touch`           | `TouchMode`            | `'off'`         | touch input: `off` or `surface`                                                                       |
-| `mount`           | `MountKind`            | `'top-layer'`   | how the layer is placed; see [Mounting](#mounting)                                                    |
-| `persistent`      | `boolean`              | `false`         | keep the region after the pointer is released                                                         |
-| `disabled`        | `boolean`              | `false`         | create the instance without enabling it                                                               |
-| `threshold`       | `number`               | `3`             | how far the pointer must move before it counts as a gesture (pixels)                                  |
-| `zIndex`          | `number`               | `2147483646`    | used by the legacy `fixed` mount only; ignored in the top layer                                       |
+| Option            | Type                              | Default         | Meaning                                                                                                                   |
+| ----------------- | --------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `effect`          | `'invert'`                        | `'invert'`      | what the region does; v0.1 has exactly one effect                                                                         |
+| `shape`           | `'rect' \| 'ellipse' \| 'circle'` | `'rect'`        | the geometry of the region; see [Shapes](#shapes)                                                                         |
+| `controller`      | `'drag' \| 'follow'`              | `'drag'`        | how the geometry is produced: a press and pull, or the pointer alone; see [Following the pointer](#following-the-pointer) |
+| `followSize`      | `number \| FollowSize`            | `120`           | the size of a followed region, in CSS px; a number means a square; ignored by `controller: 'drag'`                        |
+| `activation`      | `ActivationKind`                  | `'modifier'`    | who may start a gesture                                                                                                   |
+| `modifier`        | `ModifierSpec \| null`            | `'alt'`         | key(s) for `activation: 'modifier'`; also accepts a predicate                                                             |
+| `surface`         | `HTMLElement \| null`             | `null`          | the element the gesture belongs to; required by `activation: 'element'` and `touch: 'surface'`                            |
+| `interactionRoot` | `EventTarget \| null`             | `document.body` | where `pointerdown` is listened for, in the capture phase; `pointermove`/`up`/`cancel` go on `window`                     |
+| `touch`           | `TouchMode`                       | `'off'`         | touch input: `off` or `surface`                                                                                           |
+| `mount`           | `MountKind`                       | `'top-layer'`   | how the layer is placed; see [Mounting](#mounting)                                                                        |
+| `persistent`      | `boolean`                         | `false`         | keep the region after the pointer is released                                                                             |
+| `disabled`        | `boolean`                         | `false`         | create the instance without enabling it                                                                                   |
+| `threshold`       | `number`                          | `3`             | how far the pointer must move before it counts as a gesture (pixels)                                                      |
+| `zIndex`          | `number`                          | `2147483646`    | used by the legacy `fixed` mount only; ignored in the top layer                                                           |
 
 `| undefined` on every key is for `exactOptionalPropertyTypes`: `{ modifier: undefined }` is the
 ordinary way to drop a setting. `null` is a real value in three places, and it does not mean the same
@@ -281,6 +290,70 @@ value, refuses to start the drag and warns once with the value it saw
 (`touch-action-not-none`). Setting `touch-action: none` on the surface in your own CSS is the
 reliable way — then nothing depends on who wins a style conflict.
 
+## Shapes
+
+`shape` chooses the geometry. Three names exist, and version 0.2 added the two round ones:
+
+| `shape`     | What is shown                                              |
+| ----------- | ---------------------------------------------------------- |
+| `'rect'`    | the rectangle you dragged or asked for — that box, exactly |
+| `'ellipse'` | the ellipse inscribed in that box                          |
+| `'circle'`  | a circle as large as that box allows, centred in it        |
+
+A circle cannot be drawn inside an arbitrary box without a decision, so there is one: `circle` shows
+the largest circle the box allows — a diameter equal to its smaller side — centred in the box. It
+normalizes the geometry instead of stretching it, so a 320×200 box shows a 200 px circle in the
+middle of it, never an oval.
+
+What the instance reports is the box a shape **really occupies**, and the two places that report
+geometry always agree: the `bounds` property and the payloads of `change` and `end`. For `rect` and
+`ellipse` that is the requested box unchanged; for `circle` it is the fitted square. After a `circle`
+drag, `bounds.width` and `bounds.height` are equal — that is the circle on screen, not the box that
+was dragged.
+
+The silhouette is drawn on the layer, which is a unit box moved and scaled by `transform` alone (a
+frame costs the compositor, not the layout engine). The round shapes come from a `clip-path` with an
+SVG path written once in unit-box coordinates and scaled along with the box, so the same string
+serves every size and both round shapes. Coordinates are CSS px, absolute, in the same viewport space
+as pointer events.
+
+## Following the pointer
+
+`controller: 'follow'` has no gesture at all: the region appears under the pointer while the
+activation right holds and goes away when the right is lost. There is nothing to press and nothing to
+release.
+
+```js
+visualRegion({ controller: 'follow', activation: 'always', followSize: 160 });
+```
+
+|                         | `controller: 'drag'` (default)    | `controller: 'follow'`                                                                         |
+| ----------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------- |
+| a session begins        | a press that passes `threshold`   | the first accepted pointer move                                                                |
+| the geometry            | the box between press and pointer | a box of `followSize`, centred on the pointer                                                  |
+| a session ends normally | on release                        | on leaving the document, on releasing the modifier, or on leaving the surface it is allowed in |
+| a mouse release         | ends it                           | does **not** end it — a click on a link must not close the region                              |
+| a touch release         | ends it                           | ends it: the contact is over                                                                   |
+| `pointerdown`           | starts the session                | is never listened to                                                                           |
+
+`activation` means exactly what it means for a drag, with one difference that follows from having no
+press: the right is checked on **every** accepted event, not once at the start. Releasing the modifier
+mid-follow ends the session — as a normal end (`end`, not `cancel`), because the region was dismissed
+rather than lost. Holding the modifier again starts a **new** session, not a continuation of the old
+one.
+
+`followSize` is the size of the followed region in CSS px. `120` (a square) by default; either a
+number for a square, or an object with `width` and `height` for a rectangle. Zero and negative sides
+are rejected with a `TypeError`, like every other nonsensical size. `controller: 'drag'` does not use
+it, and giving it there warns once rather than pretending it does something.
+
+Since the pointer alone drives it, `change` arrives as often as the pointer moves: at most once per
+frame, coalesced through `requestAnimationFrame`, exactly as on the drag path.
+
+`persistent: true` keeps the last geometry after a normal end, just as it does for a drag, and a
+`cancel` (focus loss, a cancelled pointer, the tab going hidden) clears the region regardless.
+`clearRegion()` clears it too, and following resumes on the next accepted move.
+
 ## Showing a region without a gesture
 
 ```js
@@ -298,9 +371,17 @@ adding a second one, and `clearRegion()` removes it. `clearRegion()` also clears
 behind by `persistent`. More than one region per instance is not implemented — see
 [Roadmap](#roadmap--not-implemented).
 
-If you want the region to follow something on screen, measure it yourself: `getBoundingClientRect()`
-plus `setRegion()`. An element-bound region (the library tracking the element for you) is not part of
-v0.1.
+While a region shown by `setRegion()` is on screen, a **gesture does not replace it**. The pointer
+keeps moving and nothing is drawn under it; `clearRegion()` hands the geometry back to the
+controller, and the next accepted move takes over. The reason is that the page asked for that region
+explicitly, and a modifier key held by accident is not a request to throw it away. This is one rule
+for both controllers, not a `follow` speciality.
+
+If you want a region to track the pointer, that is [the `follow`
+controller](#following-the-pointer) rather than something you build out of `setRegion()`. If you want
+it to track something else on screen, measure it yourself: `getBoundingClientRect()` plus
+`setRegion()`. An element-bound region (the library tracking the element for you) is not implemented —
+see [Roadmap](#roadmap--not-implemented).
 
 ## Mounting
 
@@ -400,16 +481,17 @@ why none are needed.
 
 ## Browser support
 
-| Engine         | Version (Playwright 1.63.0) | Result                                |
-| -------------- | --------------------------- | ------------------------------------- |
-| Chromium       | 153.0.8010.12               | 125 checks pass at DPR=1, 99 at DPR=2 |
-| Firefox        | 155.0                       | same set, same result                 |
-| WebKit (Linux) | 26.6                        | same set, same result                 |
+| Engine         | Version (Playwright 1.63.0) | Result                                 |
+| -------------- | --------------------------- | -------------------------------------- |
+| Chromium       | 153.0.8010.12               | 146 checks pass at DPR=1, 120 at DPR=2 |
+| Firefox        | 155.0                       | same set, same result                  |
+| WebKit (Linux) | 26.6                        | same set, same result                  |
 
 The matrix covers geometry, the pointer path, top-layer ordering with the site's own dialogs and
 popovers, hostile roots (`transform`/`opacity`/`filter` on `html`/`body`), pixel-exact inversion,
 both CSP configurations, HiDPI (`deviceScaleFactor: 2`), lifecycle and destroy-in-the-middle-of-a-
-gesture.
+gesture. Since v0.2 it also covers the pixel shape of the silhouettes (`ellipse`, `circle`), the
+`follow` controller's life cycle and the new declarative attributes, in both DPR profiles.
 
 What this does **not** say:
 
@@ -427,17 +509,22 @@ What this does **not** say:
 
 Gzip, from the built artifacts:
 
-| Artifact                                   | Raw      | Gzip        | Budget    |
-| ------------------------------------------ | -------- | ----------- | --------- |
-| Consumer using the whole drag-region (ESM) | 14.16 KB | **5.03 KB** | ≤ 6.00 KB |
-| The same as the CDN/IIFE build             | 16.72 KB | **5.88 KB** | ≤ 7.00 KB |
-| Consumer using only `supported`            | 0.27 KB  | 0.17 KB     | —         |
-| `index.cjs` (CommonJS entry)               | 16.55 KB | 5.81 KB     | —         |
-| `index.d.ts` (types, no runtime cost)      | 3.42 KB  | 1.45 KB     | —         |
+| Artifact                               | Raw      | Gzip        | Budget    |
+| -------------------------------------- | -------- | ----------- | --------- |
+| Consumer using the whole library (ESM) | 17.60 KB | **6.00 KB** | ≤ 6.50 KB |
+| The same as the CDN/IIFE build         | 20.77 KB | **7.05 KB** | ≤ 7.50 KB |
+| Consumer using only `supported`        | 0.85 KB  | 0.49 KB     | —         |
+| `index.cjs` (CommonJS entry)           | 20.59 KB | 6.97 KB     | —         |
+| `index.d.ts` (types, no runtime cost)  | 3.41 KB  | 1.44 KB     | —         |
 
-"Whole drag-region" means everything a normal consumer gets: the instance, the pointer controller,
-the rectangle geometry, the layer and the blend renderer. The two budgets are hard gates, not
-warnings, and zero runtime dependencies is asserted next to them.
+"Whole library" means everything a normal consumer gets when it touches the API: the instance, both
+controllers, all three shapes, the layer and the blend renderer. The two budgets are hard gates, not
+warnings, and zero runtime dependencies is asserted next to them. Both moved with the v0.2 features
+above — the consumer from 6.00 to 6.50 KB, the IIFE from 7.00 to 7.50 KB when the declarative parser
+gained `data-shape`, `data-controller` and `data-follow-size` — measured against the built
+artifacts, not estimated, with the reasons recorded in
+[harness/DECISIONS.md](harness/DECISIONS.md). The consumer build drops the parser entirely, which is
+why it did not move at all in that step.
 
 ## Demo
 
@@ -476,10 +563,24 @@ The complete list of what this version does, so nothing above has to be inferred
   `supported`;
 - the seven events above, `enable()` / `disable()` / `destroy()`, and live `setOptions()`.
 
+## New in v0.2 (unreleased)
+
+`0.1.0` is what npm holds and what the tag `v0.1.0` points at. This source tree has more than that, and
+this is the whole list of it — unreleased, so treat it as the direction and not as a published promise:
+
+- **Two more shapes**, `ellipse` and `circle`, both on the geometry contract every shape implements —
+  see [Shapes](#shapes);
+- **the `follow` controller** — `controller: 'follow'` with `followSize`: a region that appears under
+  the pointer while the activation right holds, with no gesture at all — see
+  [Following the pointer](#following-the-pointer);
+- **one behaviour change**: while a region shown by `setRegion()` is on screen, a gesture no longer
+  replaces it; `clearRegion()` hands the geometry back to the controller (see
+  [Showing a region without a gesture](#showing-a-region-without-a-gesture)).
+
 ## Roadmap / not implemented
 
-None of this exists in v0.1, none of it is promised for a particular version, and none of it should be
-inferred from the API above. It is recorded so the direction is not a mystery.
+None of this exists in v0.1, and none of it should be inferred from the API above. It is recorded so
+the direction is not a mystery.
 
 - **Multiple regions per instance.** The intended default is union semantics: overlapping regions
   receive the effect once, not twice. A per-region API would follow the shape
@@ -489,8 +590,9 @@ inferred from the API above. It is recorded so the direction is not a mystery.
 - **Element-bound regions.** `addElementRegion(element, options)`: the library tracking an element's
   box instead of you measuring it. It needs a resize/scroll watch and a decision about
   `position: fixed` versus document coordinates, neither of which is designed yet.
-- **Shapes.** Circle, ellipse and rounded rectangles, behind a geometry contract that today's
-  rectangle does not have.
+- **More shapes.** Rounded rectangles, and silhouettes that are neither round nor rectangular. The
+  geometry contract and the drawing mechanism are in place (see [Shapes](#shapes)); the shapes are
+  not.
 - **Other effects, in two separate directions.** (1) A _configurable difference colour_ — the current
   renderer is a live-DOM blend of one colour, so choosing that colour is a natural extension of what
   already ships. (2) A _true palette / `colorMap`_ — mapping every source colour through an arbitrary
@@ -498,8 +600,8 @@ inferred from the API above. It is recorded so the direction is not a mystery.
   pixel or raster renderer.
 - **Motion.** Pulse, fade-in and animated transitions of a region, as a layer above geometry and
   effect rather than inside either.
-- **A cursor follower** as another controller type, and **other renderers**, including WebGL/WebGPU,
-  if a raster path is ever justified by use.
+- **More controllers**, and **other renderers**, including WebGL/WebGPU, if a raster path is ever
+  justified by use.
 
 ## Known limitations
 
@@ -509,6 +611,34 @@ inferred from the API above. It is recorded so the direction is not a mystery.
 - **A 2 CSS-px edge is not always inverted exactly** under hostile `html { transform: scale/rotate }`.
   The interior is exact (`ratio = 1`, `maxErr = 0`); the edge is rasterization of a physical boundary,
   and the affected share shrinks as DPR grows.
+- **The edge of a round silhouette is rasterized, not exact.** The interior is exact (`maxErr = 0`), but
+  the boundary is drawn by the engine. Measured over 18 engine × DPR × shape × size cells, 15 pass the
+  pixel budget, and the three that do not are named here instead of being averaged away. Two are
+  Chromium at DPR 2 — `ellipse` 600×400 and `circle` 160×160 — where the engine's own rasterizer
+  already deviates by 0.94 device-px on its worst slices and the mechanism adds at most 0.14: that is a
+  platform artifact, 0.008–0.009 px over the p95 budget. The third is WebKit at DPR 2 on the same large
+  ellipse, where the SVG path that draws the silhouette leaves the engine's own idea of the ellipse by
+  up to **2.82 device-px** on the upper-left shoulder — 28 of 3448 slices, the longest unbroken run 23
+  slices (2.1 % of that side, against a 25 % hard-fail threshold). That one is a real defect of the
+  path in WebKit, confirmed by an independent measurement in an earlier round. In all three there is no
+  leakage outside the silhouette, no hole and no wrong topology (`outsideViolations` 0, one component,
+  `maxErr` 0), and no systematic shift of a side by ≥ 1 device-px (the largest mean side shift is
+  0.365 px): a locally uneven piece of edge about 8 device-px wide at DPR 2, and the same cell passes at
+  DPR 1.
+- **Following stops at the edge of the document.** A `follow` region is shown while the pointer is in
+  the document. A pointer that leaves the window — or crosses into an `<iframe>`, which is a different
+  document — is not seen at all: the session ends there rather than continuing, and nothing inside an
+  iframe can be followed.
+- **A followed region emits `change` as fast as the pointer moves**, at most once per frame. That is the
+  same rate as a drag in motion, but it lasts as long as the pointer keeps moving, so a listener should
+  not do anything expensive in it.
+- **A `circle` under a drag unfolds gradually.** While the box is being dragged, the circle is the
+  largest one that fits it so far, so its diameter follows the shorter side: dragging a wide, short box
+  keeps the circle growing until the height settles, and a drag started from a corner shows nothing
+  while either side is still zero. `ellipse` fills the box from the first pixel.
+- **A gesture does not replace a programmatic region** — see
+  [above](#showing-a-region-without-a-gesture). For code coming from v0.1 this is a change of
+  behaviour: a drag used to overwrite a region shown by `setRegion()`.
 - **Overlapping regions cancel** — see [above](#multiple-instances-and-overlapping-regions).
 - **Top layer ordering is last-in-wins**, and the library does not contest it (`lost-top-layer`).
 - **Native HTML5 drag competes with the gesture.** `<img>` and `<a>` are draggable by default, and

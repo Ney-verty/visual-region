@@ -15,6 +15,11 @@ import { round2 } from '../util/geometry.js';
 export const rectShape: RegionShape = {
   kind: 'rect',
 
+  /** A rectangle occupies the whole box it was asked for: the identity is the definition, not a stub. */
+  fit(bounds: Bounds): Bounds {
+    return bounds;
+  },
+
   apply(layer: HTMLElement, bounds: Bounds): void {
     const x = round2(bounds.x);
     const y = round2(bounds.y);

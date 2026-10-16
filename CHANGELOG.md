@@ -7,6 +7,49 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 API is frozen per minor version: within `0.1.x` names, signatures and semantics do not change; a
 breaking change bumps the minor version.
 
+## [Unreleased]
+
+Not released. Nothing below is in `0.1.0` on npm, or in the `v0.1.0` tag.
+
+### Added
+
+- **Two more shapes:** `shape: 'ellipse'` and `shape: 'circle'`, on a geometry contract that every
+  shape implements. `circle` fits the largest circle the requested box allows and reports that square as
+  the region's geometry, so `bounds` and the payloads of `change` and `end` always describe what is
+  actually on screen. The round silhouette is a `clip-path` with an SVG path written once in unit-box
+  coordinates, so it costs no per-frame work beyond the transform the rectangle already needed.
+- **The `follow` controller:** `controller: 'follow'` with `followSize` (120 px square by default, or
+  `{ width, height }`) — a region that appears under the pointer while the activation right holds, with
+  no gesture at all: no press, no release, and no `pointerdown` listener. The activation right is
+  checked on **every** accepted event, so releasing the modifier or leaving the allowed surface ends the
+  session; a mouse release does not end it, a touch release does.
+- **A marked source for geometry writes** inside the engine — the engine's own writes and a
+  controller's are distinguishable, which is what makes the rule under _Changed_ possible without
+  adding a verb to the controller contract.
+- **The declarative markup grew three attributes:** `data-shape`, `data-controller` and
+  `data-follow-size`, so the two shapes and the follow controller can be turned on without
+  JavaScript. `data-follow-size` is read as `"120"` or `"120x80"` (a lowercase `x`, no spaces);
+  anything else warns once and leaves the default size in place rather than throwing, because
+  markup cannot be typed and one bad attribute should not take the page down.
+
+### Changed
+
+- **A gesture no longer replaces a programmatic region.** While a region shown by `setRegion()` is on
+  screen, geometry coming from a controller is ignored; `clearRegion()` hands the geometry back. In
+  `0.1.0` a drag overwrote such a region. The rule covers both controllers and is not specific to
+  `follow`.
+- **The internal list of end causes** gained a third normal end, `'ineligible'` — losing the activation
+  right in the middle of a follow. It is a normal end, so it produces `end` and never `cancel`; the
+  public union of `cancel.reason` (`'pointercancel' | 'blur' | 'visibility'`) is unchanged.
+- **Both size budgets were raised**, each by an explicit decision and each against a measurement
+  rather than an estimate: the full-consumer ESM budget from 6.00 KB to 6.50 KB gzip (6.02 KB
+  measured, up from 5.03 KB in `0.1.0`), and the IIFE budget from 7.00 KB to 7.50 KB (6.87 → 7.05 KB)
+  when the declarative parser gained the three attributes above — that build is the one that runs
+  auto-init, and the growth was attributed to `src/index.ts` alone by building the same tree with the
+  parser reverted. The consumer build was unchanged by that step (6.00 KB in both builds), so nothing
+  was duplicated into the runtime. Both remain hard gates, and cutting validation or diagnostics to
+  save bytes is not an option this project takes.
+
 ## [0.1.0] — 2026-10-11
 
 **Released 2026-10-11.** Published to npm as `visual-region@0.1.0`; this version's source is tagged

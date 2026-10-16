@@ -16,9 +16,9 @@ import {
  *   2) every registered implementation has the contract fields.
  */
 
-describe('names available in v0.1', () => {
-  it('shape: rect only', () => {
-    expect(shapeKinds()).toEqual(['rect']);
+describe('names available', () => {
+  it('shape: rect plus the round shapes of v0.2', () => {
+    expect(shapeKinds()).toEqual(['rect', 'ellipse', 'circle']);
   });
 
   it('effect: invert only', () => {
@@ -32,7 +32,7 @@ describe('names available in v0.1', () => {
 
 describe('an unknown name is null, not a default', () => {
   it('getShape', () => {
-    expect(getShape('circle')).toBeNull();
+    expect(getShape('spotlight')).toBeNull();
     expect(getShape('')).toBeNull();
   });
 
@@ -51,11 +51,17 @@ describe('an unknown name is null, not a default', () => {
 });
 
 describe('implementation contracts', () => {
-  it('shape owns geometry only: apply and reset, no pixels', () => {
-    const shape = getShape('rect');
-    expect(shape?.kind).toBe('rect');
-    expect(typeof shape?.apply).toBe('function');
-    expect(typeof shape?.reset).toBe('function');
+  it('shape owns geometry only: fit, apply and reset, no pixels', () => {
+    // `fit` is mandatory: the engine normalizes the bounds through it before applying
+    // anything, so a shape without it would silently be treated as the identity and the
+    // API would report a rectangle the user cannot see (see region/types.ts).
+    for (const kind of shapeKinds()) {
+      const shape = getShape(kind);
+      expect(shape?.kind, kind).toBe(kind);
+      expect(typeof shape?.fit, kind).toBe('function');
+      expect(typeof shape?.apply, kind).toBe('function');
+      expect(typeof shape?.reset, kind).toBe('function');
+    }
   });
 
   it('effect describes the intent, not the mechanism', () => {

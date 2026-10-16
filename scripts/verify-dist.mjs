@@ -23,6 +23,23 @@
  * stays a hard gate (overrunning is a failure, not a warning): dropping approved
  * functionality (validation, warnings) to save size is forbidden.
  *
+ * History of the numbers (they are measurements, not estimates — keep them dated):
+ *   v0.1.0 (2026-09-26): consumer 5.03 KB, IIFE 5.88 KB → the split budgets 6/7 KiB.
+ *   v0.2   (2026-10-15): consumer 6.02 KB (HEAD before the slice: 5.03 KB), IIFE
+ *          6.87 KB. The consumer budget was raised to 6.5 KiB by an explicit decision
+ *          (`harness/DECISIONS.md`, 2026-10-15): the growth is the approved v0.2 slice
+ *          (follow controller, two round shapes, three validated options), the consumer
+ *          build was re-checked for accidental bundling (the declarative parser does not
+ *          reach it) and trading validation away for 20 B is forbidden.
+ *   v0.2   (2026-10-15, step 6): the declarative parser gained `data-shape`,
+ *          `data-controller` and `data-follow-size`, and the IIFE — the build that runs
+ *          auto-init — went 6.87 → 7.05 KB, i.e. over the old 7 KiB by 0.05 KB. The IIFE
+ *          budget became 7.5 KiB under a rule agreed before the step was taken (same
+ *          decision, same date): measured, attributed by building the same tree with the
+ *          parser reverted (+184 B gzip, +543 B raw, all of it `src/index.ts`), the
+ *          consumer unchanged at 6.00 KB in both builds. The rule allowed up to 7.5 KiB;
+ *          7.05 KB is what it was spent on.
+ *
  * Run: npm run verify:dist   (requires a prior npm run build)
  */
 import fs from 'node:fs';
@@ -38,9 +55,12 @@ const ROOT = path.resolve(HERE, '..');
 const DIST = path.join(ROOT, 'dist');
 
 /* Per-artifact budgets. The original estimate (≤ 5 KB for everything) was made
-   before the shape of the public API was known. */
-const BUDGET_CONSUMER_GZIP = 6 * 1024; // ESM: full consumer bundle
-const BUDGET_IIFE_GZIP = 7 * 1024; // IIFE: file for the CDN
+   before the shape of the public API was known; the numbers are re-measured against
+   the built artifacts on every change, never estimated. Both budgets moved on
+   2026-10-15 (v0.2): consumer 6 → 6.5 KiB, IIFE 7 → 7.5 KiB — see the header and
+   harness/DECISIONS.md. */
+const BUDGET_CONSUMER_GZIP = 6.5 * 1024; // ESM: full consumer bundle
+const BUDGET_IIFE_GZIP = 7.5 * 1024; // IIFE: file for the CDN
 
 let failures = 0;
 const ok = (name, detail = '') => console.log(`  PASS  ${name}${detail ? ' — ' + detail : ''}`);

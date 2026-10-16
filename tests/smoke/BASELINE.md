@@ -13,8 +13,20 @@ here, in prose, and a run of the same shape is re-recorded on demand by the reci
 
 | Profile | Checks  | Records | Failures |
 | ------- | ------- | ------- | -------- |
-| DPR=1   | 125 × 3 | 149 × 3 | 0        |
-| DPR=2   | 99 × 3  | 108 × 3 | 0        |
+| DPR=1   | 146 × 3 | 170 × 3 | 0        |
+| DPR=2   | 120 × 3 | 129 × 3 | 0        |
+
+Re-recorded 2026-10-15 for the v0.2 slice (the previous numbers were 125/149 at DPR=1 and 99/108 at
+DPR=2). The 21 new checks are the slice's own: eleven in the in-page battery — two `shapes:` checks
+(what a shape reports), eight `follow:` checks (a move opens a session with no press, one write per
+frame with the last point winning, losing the right is a normal `end`, leaving the surface, a touch
+release versus a mouse release, `persistent`, `cancel`, and the programmatic region outranking the
+pointer) and one for the new markup attributes (`data-shape`, `data-controller`, `data-follow-size`,
+including the invalid size warning and falling back to the default) — and ten in the runner, five
+per round shape, measuring the silhouette in pixels. Nothing existing was touched except one stale
+literal: the "configuration errors fail loudly" check used `circle` as its example of an unknown
+shape name, and in v0.2 it is a real shape, so the example became `triangle` (the check, its other
+seven cases and its expectation are unchanged).
 
 Both profiles are full runs of three engines (chromium 153.0.8010.12 / firefox 155.0 / webkit 26.6,
 Node v20.19.6, linux x64). Re-recording a reference run is deliberate, not a side effect of running
@@ -106,6 +118,39 @@ fringe's share falls as DPR grows (the same absolute border width in CSS pixels 
 pixels), while the interior stays exact. This is the edge of the region's physical boundary when its
 position after the transform is fractional — classified as **rasterisation behaviour**, and enlarging
 the region does not cure it (decision of 2026-09-26).
+
+## The silhouettes of `ellipse` and `circle` (v0.2)
+
+The geometry half of the shape contract — "a circle reports the square it really occupies, and
+`bounds`/`change`/`end` carry that square" — is pinned in the in-page battery, which compares the
+reported box against one computed independently in the check. The other half is the silhouette, and
+it only exists in pixels. Both shapes are measured in both profiles, once per engine, on the same
+requested box (the probe inset by 8 px: 344 × 224 at (32, 74)):
+
+- `ellipse` — fills the requested box;
+- `circle` — the largest circle it allows: 224 × 224 at (92, 74), i.e. centred in the requested box.
+
+The expected area is π/4 = 0.7854 of the fitted box, because the inverted part is the inscribed
+ellipse of that box. Measured, as the fraction of inverted pixels over the whole fitted box:
+
+| Engine         | `ellipse` DPR=1 | `circle` DPR=1 | `ellipse` DPR=2 | `circle` DPR=2 |
+| -------------- | --------------- | -------------- | --------------- | -------------- |
+| Chromium       | 0.7777          | 0.7763         | 0.7820          | 0.7813         |
+| Firefox        | 0.7791          | 0.7774         | 0.7821          | 0.7814         |
+| WebKit (Linux) | 0.7795          | 0.7781         | 0.7823          | 0.7818         |
+
+Every figure is 0.3–0.9 % below π/4, and the shortfall halves when the device pixel ratio doubles:
+that is the antialiased boundary, which is a fixed width in CSS pixels and therefore a smaller
+share of the shape at 2×. It is the same effect as the 2 CSS-px fringe above, and none of the three
+engines is an outlier here — the spread between engines is 0.2 %. The check asserts the band
+0.72–0.84: wide enough for that boundary, far too narrow for a missing `clip-path`, which would put
+the ratio at 1.0.
+
+Also verified in the same checks, in both profiles: the interior is inverted with a per-channel
+error ≤ 1; the four corner boxes of the fitted box (0.1 of each side — the innermost point of each
+sits 1.13 radii from the centre of the shape, ~15 px clear of the arc) are untouched with
+`errMax=0`; nothing changes outside the shape's box; and the layer's own rectangle equals the box
+the shape reports to within 0.0 px in all twelve engine × shape × profile combinations.
 
 ## The `::backdrop` checks
 

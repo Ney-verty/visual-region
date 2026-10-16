@@ -3,6 +3,7 @@ import type { Mount } from '../mount/types.js';
 import type { RegionShape } from '../region/types.js';
 import type { Renderer } from '../render/types.js';
 import { rectShape } from '../region/rect.js';
+import { circleShape, ellipseShape } from '../region/ellipse.js';
 import { invertEffect } from '../effect/invert.js';
 import { blendRenderer } from '../render/blend.js';
 import { topLayerMount } from '../mount/top-layer.js';
@@ -19,11 +20,15 @@ import { fixedMount } from '../mount/fixed.js';
  *   controllers — no registry at all: there is exactly one controller, and it is chosen not
  *                 by name but as a consequence of `activation` ('programmatic' → no controller).
  *
- * There is no public `register*` in v0.1. The extension point exists as these tables:
- * when circle, spotlight or a second renderer appears, an entry is added here, and at the
- * same time — once there is a second independent implementation — we will open the contract.
+ * There is still no public `register*`. The extension point exists as these tables: the round
+ * shapes (v0.2) were added as entries here, not as a new mechanism, and the contract stays
+ * closed until an implementation appears that we did not write.
  */
-const shapes = new Map<string, RegionShape>([['rect', rectShape]]);
+const shapes = new Map<string, RegionShape>([
+  ['rect', rectShape],
+  ['ellipse', ellipseShape],
+  ['circle', circleShape],
+]);
 const effects = new Map<string, Effect>([['invert', invertEffect]]);
 const renderers: readonly Renderer[] = [blendRenderer];
 const mounts = new Map<string, Mount>([

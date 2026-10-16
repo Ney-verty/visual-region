@@ -1,6 +1,5 @@
 import type { Bounds } from '../region/types.js';
-import type { Controller, ControllerHost } from '../controller/types.js';
-import type { EndCause } from '../controller/types.js';
+import type { Controller, ControllerHost, EndCause, NormalEndCause } from '../controller/types.js';
 import type { Mount } from '../mount/types.js';
 import type { Activation } from '../interaction/activation.js';
 import type { EventPayloads, Spec, VisualRegionState } from './types.js';
@@ -8,6 +7,7 @@ import { Emitter, dispatchDomEvent } from './events.js';
 import { getMount } from './registry.js';
 import { createActivation } from '../interaction/activation.js';
 import { createDragController } from '../controller/drag.js';
+import { createFollowController } from '../controller/follow.js';
 import { setStyles } from '../util/style.js';
 import { isBrowser } from '../util/env.js';
 import { warnOnce } from '../util/warn.js';
@@ -15,6 +15,31 @@ import { warnOnce } from '../util/warn.js';
 /** With no region yet, the layer is neither painted nor catching the pointer: `visibility` does not affect the box tree. */
 const HIDDEN: Record<string, string> = { visibility: 'hidden' };
 const SHOWN: Record<string, string> = { visibility: 'visible' };
+
+/**
+ * The ends that are a normal finish of a session, not a failure of it: only a cancellation may
+ * throw away even a `persistent` region.
+ *
+ * Written as a `Record<NormalEndCause, true>` rather than as a list so that adding an end cause
+ * to the type FAILS THE BUILD here: a new kind of end must be classified consciously, it cannot
+ * silently fall into "cancel" and start clearing regions.
+ */
+const NORMAL_END: Record<NormalEndCause, true> = {
+  pointerup: true,
+  pointerout: true,
+  ineligible: true,
+};
+
+function isNormalEnd(cause: EndCause): cause is NormalEndCause {
+  return cause in NORMAL_END;
+}
+
+/**
+ * Who asked for the geometry. The engine's own writes (setRegion, clearRegion, losing the top
+ * layer, teardown) are always applied; a controller's writes are not, while the page is showing
+ * a region it set itself. See Engine.controllerHost.
+ */
+type WriteSource = 'engine' | 'controller';
 
 /**
  * The instance engine: owns the state, the layer and the lifecycle.
@@ -129,8 +154,13 @@ export class Engine implements ControllerHost {
     });
 
     if (this.activation.listens) {
-      this.controller = createDragController(this.activation, this.spec.threshold);
-      this.controller.attach(this.spec.interactionRoot, this);
+      // 'programmatic' means "no controller at all" and is settled above by `listens`; the
+      // remaining choice is the life cycle of the geometry, and it is a name, not a consequence.
+      this.controller =
+        this.spec.controller === 'follow'
+          ? createFollowController(this.activation, this.spec.followSize)
+          : createDragController(this.activation, this.spec.threshold);
+      this.controller.attach(this.spec.interactionRoot, this.controllerHost());
     }
 
     this.state = 'enabled';
@@ -170,6 +200,28 @@ export class Engine implements ControllerHost {
   // --- ControllerHost -------------------------------------------------------
 
   applyGeometry(bounds: Bounds | null): void {
+    this.writeGeometry(bounds, 'engine');
+  }
+
+  /**
+   * The host a CONTROLLER writes through.
+   *
+   * It exists so that the engine can tell its own writes from a controller's, without asking
+   * the controller who it is (the controllers stay dumb). While a programmatic region is shown
+   * (PLAN §2 step 3.5), a pointer's geometry is ignored: the page asked for that region, and a
+   * gesture must not quietly replace it. `clearRegion()` lifts this.
+   */
+  private controllerHost(): ControllerHost {
+    return {
+      applyGeometry: (bounds) => this.writeGeometry(bounds, 'controller'),
+      onStart: () => this.onStart(),
+      onFinish: (cause, bounds) => this.onFinish(cause, bounds),
+    };
+  }
+
+  private writeGeometry(bounds: Bounds | null, source: WriteSource): void {
+    if (this.pinned && source === 'controller') return;
+
     const layer = this.layer;
     if (layer === null) return;
     if (bounds === null) {
@@ -177,24 +229,40 @@ export class Engine implements ControllerHost {
       this.lastBounds = null;
       return;
     }
-    this.spec.shape.apply(layer, bounds);
+    // The shape may occupy less than it was asked for (a circle inside a non-square box).
+    // We fit ONCE, here, and from this point on everyone — the layer, getBounds(), the
+    // `change` event — sees the same rectangle. For `rect` fit() is the identity, so the
+    // object is the caller's own and v0.1 behavior is bit-for-bit unchanged.
+    const fitted = this.spec.shape.fit(bounds);
+    this.spec.shape.apply(layer, fitted);
     setStyles(layer, SHOWN);
-    this.lastBounds = bounds;
-    this.emit('change', { bounds });
+    this.lastBounds = fitted;
+    this.emit('change', { bounds: fitted });
   }
 
   onStart(): void {
     this.emit('start', { source: 'pointer' });
   }
 
-  onFinish(cause: EndCause, bounds: Bounds | null): void {
-    if (cause === 'pointerup') this.emit('end', { bounds });
-    else this.emit('cancel', { reason: cause });
+  onFinish(cause: EndCause, _bounds: Bounds | null): void {
+    /* The geometry reported is the engine's OWN last geometry, not the one the controller
+       passed: only the engine knows the normalized bounds (a circle in a non-square box was
+       fitted — region/types.ts), and only the engine knows whether a write was applied at all. */
+    if (!isNormalEnd(cause)) {
+      this.emit('cancel', { reason: cause });
+      /* A cancel never leaves the region behind, `persistent` or not. The write goes through the
+         CONTROLLER source: a region the page put on screen with setRegion() is not ours to
+         remove because a pointer was cancelled. */
+      this.writeGeometry(null, 'controller');
+      return;
+    }
 
-    // persistent keeps the region only after a gesture that happened: a cancel
-    // (loss of focus, pointercancel) must not leave junk on the screen.
-    const keep = cause === 'pointerup' && bounds !== null && (this.spec.persistent || this.pinned);
-    if (!keep) this.applyGeometry(null);
+    this.emit('end', { bounds: this.lastBounds });
+
+    // persistent keeps the region only after a session that happened: a cancel (loss of focus,
+    // pointercancel) must not leave junk on the screen.
+    const keep = this.lastBounds !== null && (this.spec.persistent || this.pinned);
+    if (!keep) this.writeGeometry(null, 'controller');
   }
 
   // --- programmatic region --------------------------------------------------
