@@ -5,7 +5,7 @@ import type { ActivationKind, ModifierKey, TouchMode } from './interaction/activ
 import type { FollowSize } from './controller/types.js';
 import type { MountKind } from './core/types.js';
 import { Engine } from './core/engine.js';
-import { CONTROLLERS, normalizeSpec } from './core/spec.js';
+import { CONTROLLERS, isEffectColor, normalizeSpec } from './core/spec.js';
 import { shapeKinds } from './core/registry.js';
 import { popoverApiAvailable } from './mount/capability.js';
 import { isBrowser } from './util/env.js';
@@ -170,6 +170,20 @@ function readFollowSize(value: string | undefined): number | FollowSize | undefi
   return undefined;
 }
 
+/**
+ * `data-effect-color`: the same `#rrggbb` grammar as the JS option, in either case, stored
+ * lower-case. Invalid markup does not break the element: one warning, the default colour.
+ */
+function readEffectColor(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  if (isEffectColor(value)) return value.toLowerCase();
+  warnOnce(
+    'data-effect-color-invalid',
+    `data-effect-color="${value}": expected "#rrggbb" — using the default`,
+  );
+  return undefined;
+}
+
 function readEnum<T extends string>(
   value: string | undefined,
   allowed: readonly T[],
@@ -220,6 +234,9 @@ function optionsFromData(el: HTMLElement): VisualRegionOptions | null {
   }
 
   const options: VisualRegionOptions = { effect: 'invert' };
+
+  const effectColor = readEffectColor(data['effectColor']);
+  if (effectColor !== undefined) options.effectColor = effectColor;
 
   const activation = readEnum(data['activation'], ACTIVATIONS, 'activation');
   if (activation !== undefined) options.activation = activation;

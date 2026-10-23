@@ -5,7 +5,8 @@
  * Playwright screenshots are decoded by the browser: blob → createImageBitmap →
  * canvas → getImageData. Only aggregates leave the page, not megabytes of pixels.
  *
- * Inversion criterion: after[i] ≈ 255 - before[i] per channel.
+ * Difference criterion: after[i] ≈ |before[i] - operand[i]| per channel, where the operand is
+ * the effect colour. Inversion is the private case operand = [255, 255, 255].
  * Comparing "before" and "after" at the SAME pixel is robust to font
  * antialiasing, gradient dithering and video codec artifacts.
  */
@@ -66,27 +67,31 @@
     });
   }
 
-  function avgBox(im, box) {
+  /*
+   * Optional `transform(value, channel)` is applied per pixel BEFORE averaging. The effect is
+   * not affine: abs(avg(before) - operand) is not avg(abs(before - operand)), so the expected
+   * colour must be built from the transformed pixels, not from the average.
+   */
+  function avgBox(im, box, transform) {
     var x0 = Math.max(0, Math.round(box.x)),
       y0 = Math.max(0, Math.round(box.y));
     var x1 = Math.min(im.w, x0 + Math.round(box.w)),
       y1 = Math.min(im.h, y0 + Math.round(box.h));
-    var r = 0,
-      g = 0,
-      b = 0,
+    var acc = [0, 0, 0],
       n = 0;
     for (var y = y0; y < y1; y++) {
       var row = y * im.w * 4;
       for (var x = x0; x < x1; x++) {
         var i = row + x * 4;
-        r += im.data[i];
-        g += im.data[i + 1];
-        b += im.data[i + 2];
+        for (var k = 0; k < 3; k++) {
+          var v = im.data[i + k];
+          acc[k] += transform ? transform(v, k) : v;
+        }
         n++;
       }
     }
     if (!n) return null;
-    return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+    return [Math.round(acc[0] / n), Math.round(acc[1] / n), Math.round(acc[2] / n)];
   }
 
   /* Spread inside the box: if it is large, the "average color" is a poor metric. */
@@ -114,14 +119,17 @@
   /*
    * opts:
    *   boxes: [{ label, x, y, w, h, mode: 'complement'|'unchanged' }]
-   *     'complement' — expect after ≈ 255 - before (the effect applied)
+   *     'complement' — expect after ≈ |before - operand| (the effect applied; for the default
+   *                    white operand that is exactly the inversion 255 - before)
    *     'unchanged'  — expect after ≈ before      (no effect expected)
+   *   operand: [r,g,b] of the effect colour (default [255,255,255])
    *   tol: per-channel tolerance (default 3)
-   *   region: {x,y,w,h} — area for the per-pixel check |after - (255-before)|
+   *   region: {x,y,w,h} — area for the per-pixel check |after - |before - operand||
    */
   function compare(beforeB64, afterB64, opts) {
     opts = opts || {};
     var tol = opts.tol == null ? 3 : opts.tol;
+    var operand = opts.operand || [255, 255, 255];
     return Promise.all([decode(beforeB64), decode(afterB64)]).then(function (pair) {
       var A = pair[0],
         B = pair[1];
@@ -134,7 +142,12 @@
           out.boxes.push({ label: box.label, error: 'empty box' });
           return;
         }
-        var want = box.mode === 'unchanged' ? b : [255 - b[0], 255 - b[1], 255 - b[2]];
+        var want =
+          box.mode === 'unchanged'
+            ? b
+            : avgBox(A, box, function (v, k) {
+                return Math.abs(v - operand[k]);
+              });
         var err = [Math.abs(a[0] - want[0]), Math.abs(a[1] - want[1]), Math.abs(a[2] - want[2])];
         out.boxes.push({
           label: box.label,
@@ -170,7 +183,7 @@
             for (var k = 0; k < 3; k++) {
               var br = A.data[i + k],
                 ar = B.data[i + k];
-              e += Math.abs(ar - (255 - br));
+              e += Math.abs(ar - Math.abs(br - operand[k]));
             }
             e = e / 3;
             n++;

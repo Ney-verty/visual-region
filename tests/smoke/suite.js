@@ -669,7 +669,11 @@ check('autoInit: data-shape, data-controller and data-follow-size are read from 
     '<div id="mr-valid" data-visual-region="invert" data-controller="follow" ' +
     'data-activation="always" data-shape="circle" data-follow-size="120x80"></div>' +
     '<div id="mr-invalid" data-visual-region="invert" data-controller="follow" ' +
-    'data-activation="always" data-follow-size="120 x 80"></div>';
+    'data-activation="always" data-follow-size="120 x 80"></div>' +
+    '<div id="mr-color" data-visual-region="invert" data-activation="programmatic" ' +
+    'data-effect-color="#FF00FF"></div>' +
+    '<div id="mr-color-invalid" data-visual-region="invert" data-activation="programmatic" ' +
+    'data-effect-color="ff00ff"></div>';
   document.body.appendChild(host);
 
   const warnings = [];
@@ -685,7 +689,7 @@ check('autoInit: data-shape, data-controller and data-follow-size are read from 
   }
   for (const vr of found) created.push(vr);
 
-  eq(found.length, 2, 'both marked-up elements were initialized');
+  eq(found.length, 4, 'every marked-up element was initialized');
   eq(found[0].state, 'enabled', 'the valid one: state');
 
   /* No pointerdown anywhere: `data-controller="follow"` really made a follow controller,
@@ -706,6 +710,23 @@ check('autoInit: data-shape, data-controller and data-follow-size are read from 
   const d = found[1].bounds;
   eq(`${d.width},${d.height}`, '120,120', 'the default size is used instead');
 
+  /* The colour from the markup: the same strict grammar as in JS, canonical lower-case.
+     `programmatic` keeps these instances out of the pointer path driven by `move()` above. */
+  eq(found[2].state, 'enabled', 'the coloured one: state');
+  eq(
+    getComputedStyle(found[2].element).backgroundColor,
+    'rgb(255, 0, 255)',
+    'the operand colour is read from data-effect-color',
+  );
+  eq(found[3].state, 'enabled', 'the invalid colour one: state');
+  eq(
+    getComputedStyle(found[3].element).backgroundColor,
+    'rgb(255, 255, 255)',
+    'an invalid colour falls back to white',
+  );
+  const colorWarned = warnings.filter((line) => line.includes('data-effect-color'));
+  eq(colorWarned.length, 1, 'a single warning for the invalid colour: ' + JSON.stringify(warnings));
+
   /* Destroyed here rather than left to destroyAll(): the assertion below is about the page's own
      markup, and it has to hold now, not two checks later. */
   for (const vr of found) {
@@ -714,6 +735,44 @@ check('autoInit: data-shape, data-controller and data-follow-size are read from 
   }
   host.remove();
   eq(document.querySelectorAll('[data-visual-region]').length, 1, 'the page has its own markup back');
+});
+
+check('effectColor: two live instances keep their own colour across recreation', async () => {
+  /* The proof is not "two freshly built objects differ" but "recreating one instance does not
+     repaint the other". If the registry effect were shared and mutated, setOptions() on A would
+     leak its colour into B through the common object. */
+  const layersBefore = document.querySelectorAll('[data-visual-region-layer]').length;
+  const a = new VisualRegion({ activation: 'programmatic', effectColor: '#ff00ff' });
+  const b = new VisualRegion({ activation: 'programmatic', effectColor: '#00ffff' });
+  try {
+    a.setRegion({ x: 40, y: 40, width: 120, height: 80 });
+    b.setRegion({ x: 220, y: 40, width: 120, height: 80 });
+
+    eq(getComputedStyle(a.element).backgroundColor, 'rgb(255, 0, 255)', 'A: its own operand');
+    eq(getComputedStyle(b.element).backgroundColor, 'rgb(0, 255, 255)', 'B: its own operand');
+
+    a.setOptions({ effectColor: '#ffffff' });
+    eq(getComputedStyle(a.element).backgroundColor, 'rgb(255, 255, 255)', 'A after recreation');
+    eq(getComputedStyle(b.element).backgroundColor, 'rgb(0, 255, 255)', 'B is untouched by A');
+    eq(a.state, 'enabled', 'A stays enabled');
+    eq(b.state, 'enabled', 'B stays enabled');
+    assert(a.bounds !== null && b.bounds !== null, 'both regions survived the recreation');
+
+    b.setOptions({ effectColor: '#ff00ff' });
+    eq(getComputedStyle(b.element).backgroundColor, 'rgb(255, 0, 255)', 'B after recreation');
+    eq(getComputedStyle(a.element).backgroundColor, 'rgb(255, 255, 255)', 'A is untouched by B');
+
+    a.destroy();
+    b.destroy();
+    eq(
+      document.querySelectorAll('[data-visual-region-layer]').length,
+      layersBefore,
+      'both layers are gone',
+    );
+  } finally {
+    a.destroy();
+    b.destroy();
+  }
 });
 
 check('CSP: there are no library violations in the journal', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { normalizeSpec } from '../../src/core/spec.js';
+import { invertEffect } from '../../src/effect/invert.js';
 import { resetWarnings } from '../../src/util/warn.js';
 
 /*
@@ -36,6 +37,7 @@ describe('normalizeSpec: defaults', () => {
     expect(spec.surface).toBeNull();
     expect(spec.shape.kind).toBe('rect');
     expect(spec.effect.kind).toBe('invert');
+    expect(spec.effect.color).toBe('#ffffff');
     expect(spec.renderer.kind).toBe('blend');
     expect(spec.controller).toBe('drag');
     expect(spec.followSize).toEqual({ width: 120, height: 120 });
@@ -72,6 +74,37 @@ describe('normalizeSpec: defaults', () => {
   });
 });
 
+describe('normalizeSpec: effect colour', () => {
+  it('the default operand is white, through the plain object and the explicit effect', () => {
+    expect(normalizeSpec(undefined).effect.color).toBe('#ffffff');
+    expect(normalizeSpec({ effect: 'invert' }).effect.color).toBe('#ffffff');
+  });
+
+  it('a colour is accepted in any case and stored lower-case', () => {
+    const spec = normalizeSpec({ effectColor: '#FF00FF' });
+    expect(spec.effect.color).toBe('#ff00ff');
+    // The colour is a parameter of the intent, not a new effect kind.
+    expect(spec.effect.kind).toBe('invert');
+    expect(spec.effect.intent).toBe('invert');
+  });
+
+  it('the registry effect is never mutated by coloured specs', () => {
+    // The registry holds one shared object. A coloured spec must get its own copy, otherwise
+    // one instance would repaint every other instance on the page.
+    const a = normalizeSpec({ effectColor: '#ff00ff' });
+    const b = normalizeSpec({ effectColor: '#00ffff' });
+    expect(a.effect.color).toBe('#ff00ff');
+    expect(b.effect.color).toBe('#00ffff');
+    expect(a.effect).not.toBe(b.effect);
+    expect(a.effect).not.toBe(invertEffect);
+    expect(b.effect).not.toBe(invertEffect);
+    expect(invertEffect.color).toBe('#ffffff');
+    // And the default still uses the shared object untouched.
+    expect(normalizeSpec({}).effect.color).toBe('#ffffff');
+    expect(normalizeSpec({}).effect).toBe(invertEffect);
+  });
+});
+
 describe('normalizeSpec: loud errors', () => {
   /* The table's values are forbidden by the types — and that is the point of the
      check: we fix that the library fails loudly when a call comes from JS (without
@@ -85,6 +118,16 @@ describe('normalizeSpec: loud errors', () => {
 
   const cases: Array<[string, () => unknown]> = [
     ['unknown effect', wrong({ effect: 'blur' })],
+    ['effectColor: a number', wrong({ effectColor: 0xff00ff })],
+    ['effectColor: null', wrong({ effectColor: null })],
+    ['effectColor: no hash', wrong({ effectColor: 'ff00ff' })],
+    ['effectColor: short form', wrong({ effectColor: '#fff' })],
+    ['effectColor: alpha form', wrong({ effectColor: '#ff00ff00' })],
+    ['effectColor: four-digit form', wrong({ effectColor: '#rgba' })],
+    ['effectColor: non-hex', wrong({ effectColor: '#gggggg' })],
+    ['effectColor: a CSS colour name', wrong({ effectColor: 'green' })],
+    ['effectColor: a colour function', wrong({ effectColor: 'rgb(255,0,255)' })],
+    ['effectColor: empty string', wrong({ effectColor: '' })],
     ['unknown shape', wrong({ shape: 'spotlight' })],
     ['unknown controller', wrong({ controller: 'lasso' })],
     ['followSize: zero', wrong({ followSize: 0 })],

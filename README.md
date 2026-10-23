@@ -86,6 +86,7 @@ value warns once and skips the element.
 | Attribute               | Same as option    | Value                                                 |
 | ----------------------- | ----------------- | ----------------------------------------------------- |
 | `data-visual-region`    | —                 | `"invert"` (required marker)                          |
+| `data-effect-color`     | `effectColor`     | `"#rrggbb"` — the operand colour of the effect        |
 | `data-shape`            | `shape`           | `rect` \| `ellipse` \| `circle`                       |
 | `data-controller`       | `controller`      | `drag` \| `follow`                                    |
 | `data-follow-size`      | `followSize`      | `"120"` (a square) or `"120x80"`                      |
@@ -159,22 +160,23 @@ broken, there is simply no honest way to draw the effect. `init()` saves you the
 
 Every option is optional and flat. Defaults are the values the instance actually uses:
 
-| Option            | Type                              | Default         | Meaning                                                                                                                   |
-| ----------------- | --------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `effect`          | `'invert'`                        | `'invert'`      | what the region does; v0.1 has exactly one effect                                                                         |
-| `shape`           | `'rect' \| 'ellipse' \| 'circle'` | `'rect'`        | the geometry of the region; see [Shapes](#shapes)                                                                         |
-| `controller`      | `'drag' \| 'follow'`              | `'drag'`        | how the geometry is produced: a press and pull, or the pointer alone; see [Following the pointer](#following-the-pointer) |
-| `followSize`      | `number \| FollowSize`            | `120`           | the size of a followed region, in CSS px; a number means a square; ignored by `controller: 'drag'`                        |
-| `activation`      | `ActivationKind`                  | `'modifier'`    | who may start a gesture                                                                                                   |
-| `modifier`        | `ModifierSpec \| null`            | `'alt'`         | key(s) for `activation: 'modifier'`; also accepts a predicate                                                             |
-| `surface`         | `HTMLElement \| null`             | `null`          | the element the gesture belongs to; required by `activation: 'element'` and `touch: 'surface'`                            |
-| `interactionRoot` | `EventTarget \| null`             | `document.body` | where `pointerdown` is listened for, in the capture phase; `pointermove`/`up`/`cancel` go on `window`                     |
-| `touch`           | `TouchMode`                       | `'off'`         | touch input: `off` or `surface`                                                                                           |
-| `mount`           | `MountKind`                       | `'top-layer'`   | how the layer is placed; see [Mounting](#mounting)                                                                        |
-| `persistent`      | `boolean`                         | `false`         | keep the region after the pointer is released                                                                             |
-| `disabled`        | `boolean`                         | `false`         | create the instance without enabling it                                                                                   |
-| `threshold`       | `number`                          | `3`             | how far the pointer must move before it counts as a gesture (pixels)                                                      |
-| `zIndex`          | `number`                          | `2147483646`    | used by the legacy `fixed` mount only; ignored in the top layer                                                           |
+| Option            | Type                              | Default         | Meaning                                                                                                                      |
+| ----------------- | --------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `effect`          | `'invert'`                        | `'invert'`      | what the region does; v0.1 has exactly one effect                                                                            |
+| `effectColor`     | `string`                          | `'#ffffff'`     | the operand colour of the difference, `#rrggbb`; see [The effect and its operand colour](#the-effect-and-its-operand-colour) |
+| `shape`           | `'rect' \| 'ellipse' \| 'circle'` | `'rect'`        | the geometry of the region; see [Shapes](#shapes)                                                                            |
+| `controller`      | `'drag' \| 'follow'`              | `'drag'`        | how the geometry is produced: a press and pull, or the pointer alone; see [Following the pointer](#following-the-pointer)    |
+| `followSize`      | `number \| FollowSize`            | `120`           | the size of a followed region, in CSS px; a number means a square; ignored by `controller: 'drag'`                           |
+| `activation`      | `ActivationKind`                  | `'modifier'`    | who may start a gesture                                                                                                      |
+| `modifier`        | `ModifierSpec \| null`            | `'alt'`         | key(s) for `activation: 'modifier'`; also accepts a predicate                                                                |
+| `surface`         | `HTMLElement \| null`             | `null`          | the element the gesture belongs to; required by `activation: 'element'` and `touch: 'surface'`                               |
+| `interactionRoot` | `EventTarget \| null`             | `document.body` | where `pointerdown` is listened for, in the capture phase; `pointermove`/`up`/`cancel` go on `window`                        |
+| `touch`           | `TouchMode`                       | `'off'`         | touch input: `off` or `surface`                                                                                              |
+| `mount`           | `MountKind`                       | `'top-layer'`   | how the layer is placed; see [Mounting](#mounting)                                                                           |
+| `persistent`      | `boolean`                         | `false`         | keep the region after the pointer is released                                                                                |
+| `disabled`        | `boolean`                         | `false`         | create the instance without enabling it                                                                                      |
+| `threshold`       | `number`                          | `3`             | how far the pointer must move before it counts as a gesture (pixels)                                                         |
+| `zIndex`          | `number`                          | `2147483646`    | used by the legacy `fixed` mount only; ignored in the top layer                                                              |
 
 `| undefined` on every key is for `exactOptionalPropertyTypes`: `{ modifier: undefined }` is the
 ordinary way to drop a setting. `null` is a real value in three places, and it does not mean the same
@@ -215,6 +217,7 @@ a mistake depends on whether it has a safe reading:
 | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | unknown key                                                                      | warns once, the key is ignored                                          |
 | unknown value for `effect`, `shape`, `mount`, `activation` or `touch`            | `TypeError`                                                             |
+| `effectColor` that is not `#rrggbb` (short form, alpha, CSS name or function)    | `TypeError`                                                             |
 | `surface` that is not an element, `interactionRoot` that is not an `EventTarget` | `TypeError`                                                             |
 | `threshold` that is not a non-negative finite number, non-integer `zIndex`       | `TypeError`                                                             |
 | `activation: 'element'` or `touch: 'surface'` without `surface`                  | `TypeError`                                                             |
@@ -316,6 +319,38 @@ frame costs the compositor, not the layout engine). The round shapes come from a
 SVG path written once in unit-box coordinates and scaled along with the box, so the same string
 serves every size and both round shapes. Coordinates are CSS px, absolute, in the same viewport space
 as pointer events.
+
+## The effect and its operand colour
+
+The `invert` effect is a live difference blend: the layer is painted with one solid colour, and the
+compositor takes the absolute per-channel difference between it and what is underneath. `effectColor`
+chooses that solid colour. The arithmetic is the whole contract:
+
+```text
+output[channel] = abs(input[channel] - effectColor[channel])
+```
+
+With the default `#ffffff` the subtraction is `255 - input`, which is exact inversion — that is why
+the option can be added without changing a single existing page. Any other colour is still a
+subtraction, so the result is not "the colour you asked for": `effectColor` is an **operand**, not an
+output colour. Black content shows up as the operand itself, and white content shows up as its
+per-channel complement. This is the part that surprises people: to turn white into green (`#00ff00`)
+the operand is magenta (`#ff00ff`), because `255 - 255 = 0` in red and blue while `255 - 0 = 255` in
+green; passing `#00ff00` turns white into magenta instead.
+
+```js
+visualRegion({ effectColor: '#ff00ff' }); // white content becomes green
+```
+
+The value is exactly `#rrggbb` — six hex digits after the hash. The short form `#fff`, an alpha
+channel, a CSS colour name or a colour function are all rejected: a configuration mistake is loud in
+JavaScript (`TypeError`) and, in markup, falls back to the default with one warning. Case does not
+matter on input (`#FF00FF` is accepted) and the library stores the canonical lower-case form.
+
+The colour belongs to the instance, not to the module: two live instances may use different operands
+and neither sees the other's choice. `setOptions({ effectColor })` changes it for that instance only,
+effective immediately; the shared effect definition is never mutated. It is one constant per
+instance, not a palette: no source colour is mapped through a lookup table.
 
 ## Following the pointer
 
@@ -483,7 +518,7 @@ why none are needed.
 
 | Engine         | Version (Playwright 1.63.0) | Result                                 |
 | -------------- | --------------------------- | -------------------------------------- |
-| Chromium       | 153.0.8010.12               | 146 checks pass at DPR=1, 120 at DPR=2 |
+| Chromium       | 153.0.8010.12               | 161 checks pass at DPR=1, 131 at DPR=2 |
 | Firefox        | 155.0                       | same set, same result                  |
 | WebKit (Linux) | 26.6                        | same set, same result                  |
 
@@ -491,7 +526,8 @@ The matrix covers geometry, the pointer path, top-layer ordering with the site's
 popovers, hostile roots (`transform`/`opacity`/`filter` on `html`/`body`), pixel-exact inversion,
 both CSP configurations, HiDPI (`deviceScaleFactor: 2`), lifecycle and destroy-in-the-middle-of-a-
 gesture. Since v0.2 it also covers the pixel shape of the silhouettes (`ellipse`, `circle`), the
-`follow` controller's life cycle and the new declarative attributes, in both DPR profiles.
+`follow` controller's life cycle, the difference arithmetic for a non-white `effectColor`, and the
+new declarative attributes, in both DPR profiles.
 
 What this does **not** say:
 
@@ -511,20 +547,21 @@ Gzip, from the built artifacts:
 
 | Artifact                               | Raw      | Gzip        | Budget    |
 | -------------------------------------- | -------- | ----------- | --------- |
-| Consumer using the whole library (ESM) | 17.60 KB | **6.00 KB** | ≤ 6.50 KB |
-| The same as the CDN/IIFE build         | 20.77 KB | **7.05 KB** | ≤ 7.50 KB |
+| Consumer using the whole library (ESM) | 17.90 KB | **6.13 KB** | ≤ 6.50 KB |
+| The same as the CDN/IIFE build         | 21.29 KB | **7.21 KB** | ≤ 7.50 KB |
 | Consumer using only `supported`        | 0.85 KB  | 0.49 KB     | —         |
-| `index.cjs` (CommonJS entry)           | 20.59 KB | 6.97 KB     | —         |
+| `index.cjs` (CommonJS entry)           | 21.11 KB | 7.13 KB     | —         |
 | `index.d.ts` (types, no runtime cost)  | 3.41 KB  | 1.44 KB     | —         |
 
 "Whole library" means everything a normal consumer gets when it touches the API: the instance, both
 controllers, all three shapes, the layer and the blend renderer. The two budgets are hard gates, not
-warnings, and zero runtime dependencies is asserted next to them. Both moved with the v0.2 features
-above — the consumer from 6.00 to 6.50 KB, the IIFE from 7.00 to 7.50 KB when the declarative parser
-gained `data-shape`, `data-controller` and `data-follow-size` — measured against the built
-artifacts, not estimated, with the reasons recorded in
-[harness/DECISIONS.md](harness/DECISIONS.md). The consumer build drops the parser entirely, which is
-why it did not move at all in that step.
+warnings, and zero runtime dependencies is asserted next to them. The budget limits were raised with
+the v0.2 declarative attributes — the consumer from 6.00 to 6.50 KB, the IIFE from 7.00 to 7.50 KB
+when the parser gained `data-shape`, `data-controller` and `data-follow-size`. The consumer build
+drops the parser entirely, so that step did not move it; `effectColor` is on the consumer path
+instead (validation and normalization live in the spec), and it moved the consumer from 6.00 to
+6.13 KB and the IIFE from 7.05 to 7.21 KB. All numbers are measured against the built artifacts, not
+estimated, with the reasons recorded in [harness/DECISIONS.md](harness/DECISIONS.md).
 
 ## Demo
 
@@ -573,6 +610,9 @@ this is the whole list of it — unreleased, so treat it as the direction and no
 - **the `follow` controller** — `controller: 'follow'` with `followSize`: a region that appears under
   the pointer while the activation right holds, with no gesture at all — see
   [Following the pointer](#following-the-pointer);
+- **`effectColor`** — the operand colour of the difference effect, from JavaScript or from
+  `data-effect-color`; `#ffffff` stays the default, so existing pages are unchanged — see
+  [The effect and its operand colour](#the-effect-and-its-operand-colour);
 - **one behaviour change**: while a region shown by `setRegion()` is on screen, a gesture no longer
   replaces it; `clearRegion()` hands the geometry back to the controller (see
   [Showing a region without a gesture](#showing-a-region-without-a-gesture)).
@@ -593,11 +633,9 @@ the direction is not a mystery.
 - **More shapes.** Rounded rectangles, and silhouettes that are neither round nor rectangular. The
   geometry contract and the drawing mechanism are in place (see [Shapes](#shapes)); the shapes are
   not.
-- **Other effects, in two separate directions.** (1) A _configurable difference colour_ — the current
-  renderer is a live-DOM blend of one colour, so choosing that colour is a natural extension of what
-  already ships. (2) A _true palette / `colorMap`_ — mapping every source colour through an arbitrary
-  lookup table. That one the current renderer cannot honestly promise: it likely needs a separate
-  pixel or raster renderer.
+- **A true palette / `colorMap`.** Mapping every source colour through an arbitrary lookup table,
+  rather than through one difference operand. The current renderer cannot honestly promise that: it
+  likely needs a separate pixel or raster renderer.
 - **Motion.** Pulse, fade-in and animated transitions of a region, as a layer above geometry and
   effect rather than inside either.
 - **More controllers**, and **other renderers**, including WebGL/WebGPU, if a raster path is ever

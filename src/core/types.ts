@@ -42,6 +42,13 @@ export interface EventPayloads {
 export interface VisualRegionOptions {
   /** The effect of the region. In v0.1 only 'invert' (decision 3). */
   effect?: 'invert' | undefined;
+  /**
+   * The operand colour of the difference effect, `#rrggbb`.
+   * `output = abs(input - effectColor)` per channel; `#ffffff` (default) is exact inversion.
+   * Not the requested output colour: black content becomes this colour, white becomes its
+   * per-channel complement.
+   */
+  effectColor?: string | undefined;
   /** The shape of the region: 'rect' (default), 'ellipse' or 'circle'. */
   shape?: 'rect' | 'ellipse' | 'circle' | undefined;
   /**

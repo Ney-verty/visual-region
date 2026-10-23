@@ -24,6 +24,7 @@ export const CONTROLLERS: readonly ControllerKind[] = ['drag', 'follow'];
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set([
   'effect',
+  'effectColor',
   'shape',
   'controller',
   'followSize',
@@ -41,6 +42,28 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
 
 function fail(message: string): never {
   throw new TypeError(`[visual-region] ${message}`);
+}
+
+/**
+ * The one colour grammar: exactly `#rrggbb`, case-insensitive. Exported for the markup parser
+ * (`data-effect-color` in index.ts), not for the public API — the grammar exists in one place,
+ * so the JS path and the declarative path cannot drift.
+ *
+ * Deliberately absent: `#rgb`, alpha forms, CSS names and `rgb()/hsl()`. The operand must be
+ * opaque for the arithmetic to be exact, and one strict grammar gives one clear diagnostic.
+ */
+const EFFECT_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+export function isEffectColor(value: unknown): value is string {
+  return typeof value === 'string' && EFFECT_COLOR.test(value);
+}
+
+/** Canonical form: lower-case `#rrggbb`. `undefined` is handled by the caller (default). */
+function normalizeEffectColor(value: unknown): string {
+  if (!isEffectColor(value)) {
+    fail(`effectColor: expected a hex colour "#rrggbb", got ${String(value)}`);
+  }
+  return value.toLowerCase();
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], key: string): T {
@@ -101,8 +124,14 @@ export function normalizeSpec(options: VisualRegionOptions | undefined): Spec {
   }
 
   const effectKind = o.effect ?? 'invert';
-  const effect = getEffect(effectKind);
-  if (effect === null) fail(`effect: unknown "${effectKind}", known: ${effectKinds().join(', ')}`);
+  const baseEffect = getEffect(effectKind);
+  if (baseEffect === null) fail(`effect: unknown "${effectKind}", known: ${effectKinds().join(', ')}`);
+  /* The registry object is shared and must never be mutated: a different colour gets a fresh
+     object, the default keeps the registry one. `undefined` yields the default through an
+     explicit ternary (not `??`), so `null` still reaches the validator and fails loudly. */
+  const effectColorRaw = o.effectColor === undefined ? '#ffffff' : o.effectColor;
+  const effectColor = normalizeEffectColor(effectColorRaw);
+  const effect = effectColor === baseEffect.color ? baseEffect : { ...baseEffect, color: effectColor };
   const renderer = getRenderer(effect);
   if (renderer === null) fail(`effect "${effectKind}": no renderer for intent "${effect.intent}"`);
 

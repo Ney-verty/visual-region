@@ -8,4 +8,5 @@ import type { Effect } from './types.js';
 export const invertEffect: Effect = {
   kind: 'invert',
   intent: 'invert',
+  color: '#ffffff',
 };

@@ -423,7 +423,21 @@ function build(report) {
 
 /* ------------------------------------------- pixel check of the region -- */
 
-async function inversionCheck(page, decoder, url, label, report, { must }) {
+/** `#rrggbb` → the per-channel operand used by the pixel comparator. */
+function operandOf(hex) {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+}
+
+function rgbCss([r, g, b]) {
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+async function inversionCheck(page, decoder, url, label, report, { must, effectColor }) {
+  const operand = effectColor ? operandOf(effectColor) : [255, 255, 255];
   await page.goto(url);
   await page.waitForFunction(() => window.__suite && window.__suite.ready, null, { timeout: 20000 });
 
@@ -464,7 +478,10 @@ async function inversionCheck(page, decoder, url, label, report, { must }) {
   const beforeInner = await shot(page, clipInner);
   const beforeOut = await shot(page, clipOut);
 
-  await page.evaluate((b) => window.__suite.scene.show(b), region);
+  await page.evaluate(
+    ({ b, color }) => window.__suite.scene.show(b, color ? { effectColor: color } : undefined),
+    { b: region, color: effectColor },
+  );
   await settle(page);
   const state = await page.evaluate(() => window.__suite.scene.state());
   const afterIn = await shot(page, clipIn);
@@ -475,6 +492,7 @@ async function inversionCheck(page, decoder, url, label, report, { must }) {
   const inside = await compare(decoder, beforeIn, afterIn, {
     boxes: [{ label: 'inside', ...insetInClip(region, clipIn, 0.2), mode: 'complement' }],
     region: imgRect(clipIn),
+    operand,
     tol: TOL,
   });
   const innerCmp =
@@ -482,6 +500,7 @@ async function inversionCheck(page, decoder, url, label, report, { must }) {
       ? null
       : await compare(decoder, beforeInner, afterInner, {
           region: imgRect(clipInner),
+          operand,
           tol: TOL,
         });
   const outside =
@@ -489,6 +508,7 @@ async function inversionCheck(page, decoder, url, label, report, { must }) {
       ? null
       : await compare(decoder, beforeOut, afterOut, {
           boxes: [{ label: 'outside', ...insetInClip(geo.outside, clipOut, 0.25), mode: 'unchanged' }],
+          operand,
           tol: TOL,
         });
 
@@ -519,17 +539,26 @@ async function inversionCheck(page, decoder, url, label, report, { must }) {
     Math.abs(state.rect.width - region.width) <= 0.5 &&
     Math.abs(state.rect.height - region.height) <= 0.5;
 
+  const kind = effectColor ? `difference with ${effectColor}` : 'inversion';
   report.add(
-    `pixels [${label}]: inversion inside the region (per-channel error ≤ ${TOL})`,
+    `pixels [${label}]: ${kind} inside the region (per-channel error ≤ ${TOL})`,
     box && box.ok,
     box && box.ok
       ? `errMax=${box.errMax}, ratio=${ratio}, strict=${strict}`
       : `before=[${box && box.before}] after=[${box && box.after}] expected=[${box && box.expected}]`,
   );
   report.add(
-    `pixels [${label}]: fraction of inverted pixels ≥ 0.97`,
+    effectColor
+      ? `pixels [${label}]: fraction of pixels matching |input - ${effectColor}| ≥ 0.97`
+      : `pixels [${label}]: fraction of inverted pixels ≥ 0.97`,
     ratio >= 0.97,
     `ratio=${ratio}, strict=${strict}, maxErr=${inside.region.maxErr}, almost-white before=${inside.region.nonWhiteBefore}`,
+  );
+  const expectedBackground = rgbCss(operand);
+  report.add(
+    `pixels [${label}]: the layer's computed background-color is ${expectedBackground}`,
+    state.background === expectedBackground,
+    `background-color=${state.background}`,
   );
   if (innerCmp) {
     report.note(
@@ -889,6 +918,16 @@ async function runBrowser(report, browsers, name, origin) {
     } catch (error) {
       report.add(`pixels [${root.id}]`, false, String(error.message || error));
     }
+  }
+
+  /* --- B1. pixels: the operand colour (one point check, not an audit) --- */
+  try {
+    await inversionCheck(page, decoder, url, 'effectColor #ff00ff', report, {
+      must: true,
+      effectColor: '#ff00ff',
+    });
+  } catch (error) {
+    report.add('pixels [effectColor #ff00ff]', false, String(error.message || error));
   }
 
   /* --- B2. pixels: the silhouettes of the round shapes --- */

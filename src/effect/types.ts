@@ -7,4 +7,10 @@ export type EffectIntent = 'invert';
 export interface Effect {
   readonly kind: string;
   readonly intent: EffectIntent;
+  /**
+   * The operand of the difference arithmetic, a canonical `#rrggbb` string. A parameter of the
+   * intent ("what"), not a pixel and not a backend setting: a renderer with the same intent must
+   * honour it. Normalized once, before the renderer sees it.
+   */
+  readonly color: string;
 }

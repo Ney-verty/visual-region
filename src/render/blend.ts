@@ -5,10 +5,12 @@ import { clearStyles, setStyles } from '../util/style.js';
 const PROPS = ['background-color', 'mix-blend-mode', 'opacity'] as const;
 
 /**
- * Inversion via `mix-blend-mode: difference` on an opaque white layer.
+ * The difference effect via `mix-blend-mode: difference` on an opaque layer.
  *
- * Why exactly this: `difference` with white gives exactly `255 − before` — measured in Chromium
- * 148, Firefox 150 and WebKit 26.4 with error 0 and ratio 1.0.
+ * With an opaque operand `C`, `difference` gives `|input − C|` per channel; white (`#ffffff`,
+ * the default) is therefore exact inversion, `255 − before` — measured in Chromium 148,
+ * Firefox 150 and WebKit 26.4 with error 0 and ratio 1.0. The colour is normalized before the
+ * renderer sees it: this code neither validates nor substitutes a default.
  *
  * Why not `backdrop-filter: invert(1)`: it silently fails in Firefox and WebKit, while
  * `CSS.supports('backdrop-filter', 'invert(1)')` returns true in all three engines — that is, the
@@ -30,7 +32,7 @@ export const blendRenderer: Renderer = {
       throw new Error(`renderer "blend" cannot render intent "${effect.intent}"`);
     }
     setStyles(layer, {
-      'background-color': '#ffffff',
+      'background-color': effect.color,
       'mix-blend-mode': 'difference',
       opacity: '1',
     });
