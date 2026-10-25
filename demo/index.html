@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>visual-region 0.1 — demo and playground</title>
+    <title>visual-region 0.2 — demo and playground</title>
     <!--
       The demo page. Built as an ordinary static site: `demo/` + `dist/`
       (see scripts/build-demo-site.mjs and .github/workflows/pages.yml).
@@ -22,7 +22,7 @@
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">visual-region <span class="ver">0.1</span></div>
+      <div class="brand">visual-region <span class="ver">0.2</span></div>
       <p class="how">
         <strong>Drag with the mouse inside the dashed playground</strong> — only what falls inside the region
         changes, everything else stays as it was. Turn on another activation (for example
@@ -36,10 +36,11 @@
         <section class="hero">
           <h1>A region where <em>only what is inside it</em> changes</h1>
           <p class="lede">
-            An ordinary rectangle drag over someone else's page: the DOM, the text, the images and the site's
-            CSS are untouched, clicks and links keep working, and on pointer release the page returns to its
-            original state. The demo uses the built package (<code>../dist/index.js</code>) as an external
-            consumer — through the same public API that is available from npm.
+            An ordinary drag over someone else's page — a rectangle, an ellipse or a circle, or a region that
+            follows the pointer: the DOM, the text, the images and the site's CSS are untouched, clicks and
+            links keep working, and when the gesture ends the page returns to its original state. The demo
+            uses the built package (<code>../dist/index.js</code>) as an external consumer — through the same
+            public API that is available from npm.
           </p>
         </section>
 
@@ -205,7 +206,7 @@
         <section class="block" id="connect">
           <h2>Connecting</h2>
           <p class="section-note">
-            Three ways below, all on the public v0.1 API. This page itself uses the first one.
+            Three ways below, all on the public v0.2 API. This page itself uses the first one.
           </p>
 
           <h3>1. Package (ESM)</h3>
@@ -225,8 +226,10 @@ const region = visualRegion({ activation: 'element', surface: document.querySele
 autoInit(); // or import 'visual-region/auto' — the same thing, but at import time</code></pre>
           <p class="section-note">
             A live example: this card is marked up with attributes and enabled through
-            <code>autoInit()</code> when the page loads. Drag right inside it — <code>persistent</code>
-            keeps the region after you release, and the next gesture replaces it.
+            <code>autoInit()</code> when the page loads. Move the pointer inside it — the card uses
+            <code>controller="follow"</code>, so the region appears without a press. All four new v0.2
+            attributes are on it: <code>data-shape</code>, <code>data-controller</code>,
+            <code>data-follow-size</code> and <code>data-effect-color</code>.
           </p>
           <div id="declarative">
             <div
@@ -234,13 +237,17 @@ autoInit(); // or import 'visual-region/auto' — the same thing, but at import 
               data-visual-region="invert"
               data-activation="element"
               data-surface="self"
-              data-persistent="true"
+              data-shape="ellipse"
+              data-controller="follow"
+              data-follow-size="160x90"
+              data-effect-color="#ff00ff"
             >
               <p>
                 <strong>The region is enabled by markup</strong><br />
                 <code
                   >data-visual-region="invert" data-activation="element" data-surface="self"
-                  data-persistent="true"</code
+                  data-shape="ellipse" data-controller="follow" data-follow-size="160x90"
+                  data-effect-color="#ff00ff"</code
                 >
               </p>
             </div>
@@ -250,7 +257,7 @@ autoInit(); // or import 'visual-region/auto' — the same thing, but at import 
         <section class="block" id="limits">
           <h2>What is not inverted, and why</h2>
           <p class="section-note">
-            These are v0.1 limitations, not promises: each one is either measured or follows directly from how
+            These are v0.2 limitations, not promises: each one is either measured or follows directly from how
             the top layer works. The full list is in the README (Known issues).
           </p>
           <ul class="limits">
@@ -297,18 +304,20 @@ autoInit(); // or import 'visual-region/auto' — the same thing, but at import 
               Measured at DPR=1 and DPR=2.
             </li>
             <li>
-              <strong>Touch input is off by default</strong> (<code>touch: 'off'</code>): v0.1 does not touch
+              <strong>Touch input is off by default</strong> (<code>touch: 'off'</code>): v0.2 does not touch
               mobile scrolling or pinch-zoom. Turn on <code>touch: 'surface'</code> in the panel to drag with
               a finger inside the playground.
             </li>
           </ul>
 
-          <h3>What v0.1 does not have</h3>
+          <h3>What v0.2 does not have</h3>
           <p class="section-note">
-            This demo's panel shows nothing that does not exist: <code>effect</code> is only
-            <code>invert</code>, <code>shape</code> is only <code>rect</code>. There is no
-            <code>filter</code>, <code>circle</code>, <code>freehand</code>, <code>spotlight</code>,
-            <code>theme</code> or <code>colorMap</code> here — those values do not exist in the library.
+            This demo's panel shows nothing that does not exist. <code>effect</code> is only
+            <code>invert</code>, <code>shape</code> is one of <code>rect</code>, <code>ellipse</code> or
+            <code>circle</code>, and <code>controller</code> is one of <code>drag</code> or
+            <code>follow</code>. There is no <code>filter</code>, <code>freehand</code>,
+            <code>spotlight</code>, <code>theme</code> or <code>colorMap</code> here — those values do not
+            exist in the library.
           </p>
         </section>
       </div>
@@ -338,6 +347,58 @@ autoInit(); // or import 'visual-region/auto' — the same thing, but at import 
             <option value="programmatic">programmatic — from code only</option>
           </select>
           <p class="hint" id="hint-activation"></p>
+        </div>
+
+        <div class="field">
+          <label for="opt-shape">shape</label>
+          <select id="opt-shape">
+            <option value="rect">rect — the pulled box</option>
+            <option value="ellipse">ellipse — fills the pulled box</option>
+            <option value="circle">circle — the largest circle that fits</option>
+          </select>
+          <p class="hint" id="hint-shape"></p>
+        </div>
+
+        <div class="field">
+          <label for="opt-controller">controller</label>
+          <select id="opt-controller">
+            <option value="drag">drag — press and pull</option>
+            <option value="follow">follow — the pointer alone</option>
+          </select>
+          <p class="hint" id="hint-controller"></p>
+        </div>
+
+        <div class="field">
+          <label for="opt-follow-width">followSize</label>
+          <div class="follow-size">
+            <input
+              type="number"
+              id="opt-follow-width"
+              min="1"
+              step="1"
+              value="120"
+              aria-label="followSize width"
+            />
+            <span aria-hidden="true">×</span>
+            <input
+              type="number"
+              id="opt-follow-height"
+              min="1"
+              step="1"
+              value="120"
+              aria-label="followSize height"
+            />
+          </div>
+          <p class="hint" id="hint-follow-size"></p>
+        </div>
+
+        <div class="field">
+          <label for="opt-effect-color">effectColor</label>
+          <input type="color" id="opt-effect-color" value="#ffffff" />
+          <p class="hint">
+            The operand of the difference effect: <code>#ffffff</code> is exact inversion. Every other colour
+            is subtracted channel by channel, <code>abs(input − effectColor)</code>.
+          </p>
         </div>
 
         <div class="field">
@@ -383,12 +444,16 @@ autoInit(); // or import 'visual-region/auto' — the same thing, but at import 
           <button type="button" id="btn-show">Show region</button>
           <button type="button" id="btn-remove">Remove region</button>
           <button type="button" id="btn-reset">Reset settings</button>
+          <button type="button" id="btn-reject">Reject a bad patch</button>
           <button type="button" id="btn-destroy" class="danger">Destroy (irreversible)</button>
           <button type="button" id="btn-recreate" hidden>Create again</button>
         </div>
         <p class="hint">
-          "Show region" is the programmatic API: <code>setRegion({ x, y, width, height })</code>. "Reset
-          settings" returns the panel to the state the page opened with.
+          "Show region" is the programmatic API: <code>setRegion({ x, y, width, height })</code>. While it is
+          shown, a gesture does not replace it — <code>clearRegion()</code> hands the geometry back. "Reject a
+          bad patch" calls <code>setOptions({ effectColor: 'red' })</code>: the call throws, and the active
+          effect and geometry stay exactly as they were. "Reset settings" returns the panel to the state the
+          page opened with.
         </p>
 
         <h3>Event log</h3>
@@ -413,7 +478,7 @@ autoInit(); // or import 'visual-region/auto' — the same thing, but at import 
 
     <footer class="footer">
       <p>
-        The demo is part of the visual-region 0.1 repository. Built from the package (<code>dist/</code>),
+        The demo is part of the visual-region 0.2 repository. Built from the package (<code>dist/</code>),
         with no import of internal <code>src/*</code> modules. Limitations are listed above.
       </p>
     </footer>

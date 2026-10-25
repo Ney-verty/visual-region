@@ -21,7 +21,8 @@
  * otherwise the roadmap would become a forbidden topic. So zones are checked
  * differently:
  *   - "current" zones (Quick start, API, Options, Events, Activation, Mounting,
- *     Declarative markup, Validation, Available in v0.1, …) — the real API only;
+ *     Declarative markup, Validation, Available in v<current minor>, …) — the real
+ *     API only;
  *   - the Roadmap zone — future names are allowed, but the section must exist, and
  *     forbidden old names may appear only inside a paragraph that says outright
  *     that they do not exist.
@@ -82,7 +83,11 @@ const EXTERNAL = new Set([
 const FORBIDDEN = ['createRegion', 'removeRegion', 'mode:', 'data-mode'];
 
 const NEGATION = /do(es)? not exist|never existed|not implemented|not part of|rejected/i;
-const CURRENT_VERSION_ZONE = /v0\.1/;
+/* The current-version zone is derived from package.json, not hand-written: a version
+   bump must not be able to leave this check green against the previous minor. */
+const PKG = JSON.parse(readText('package.json'));
+const CURRENT_MINOR = PKG.version.split('.').slice(0, 2).join('\\.');
+const CURRENT_VERSION_ZONE = new RegExp(`v${CURRENT_MINOR}`);
 
 /* Prettier pads table cells with spaces, so the parsing tolerates padding: "the
    same but with one more space" is a formatting check, not a documentation check. */

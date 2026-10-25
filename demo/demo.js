@@ -11,6 +11,11 @@ const playground = byId('playground');
 const controls = {
   activation: byId('opt-activation'),
   modifier: byId('opt-modifier'),
+  shape: byId('opt-shape'),
+  controller: byId('opt-controller'),
+  followWidth: byId('opt-follow-width'),
+  followHeight: byId('opt-follow-height'),
+  effectColor: byId('opt-effect-color'),
   mount: byId('opt-mount'),
   persistent: byId('opt-persistent'),
   touch: byId('opt-touch'),
@@ -22,6 +27,11 @@ const controls = {
 const INITIAL = {
   activation: 'element',
   modifier: 'alt',
+  shape: 'rect',
+  controller: 'drag',
+  followWidth: 120,
+  followHeight: 120,
+  effectColor: '#ffffff',
   mount: 'top-layer',
   persistent: false,
   touch: 'off',
@@ -30,12 +40,21 @@ const INITIAL = {
 /** The options in the form the public API accepts. */
 function optionsFromControls() {
   const activation = controls.activation.value;
+  const controller = controls.controller.value;
+  const width = Number(controls.followWidth.value);
+  const height = Number(controls.followHeight.value);
   return {
     activation,
     // With another activation `modifier` is not merely superfluous — the library
     // warns about it in the console. So we clear it explicitly (undefined) rather
     // than leaving it as is.
     modifier: activation === 'modifier' ? controls.modifier.value : undefined,
+    shape: controls.shape.value,
+    controller,
+    // `followSize` is a drag-only mistake: the library warns when it is given with
+    // controller: 'drag', so the panel sends it only to the controller that uses it.
+    followSize: controller === 'follow' ? (width === height ? width : { width, height }) : undefined,
+    effectColor: controls.effectColor.value,
     mount: controls.mount.value,
     persistent: controls.persistent.checked,
     touch: controls.touch.checked ? 'surface' : 'off',
@@ -87,6 +106,12 @@ const HINTS = {
     'The library does not listen to the pointer at all: the region is shown only by the "Show region" button.',
 };
 
+const CONTROLLER_HINTS = {
+  drag: 'A press and a pull produce the geometry; release ends it.',
+  follow:
+    'No press and no release: the region appears under the pointer while the activation right holds. With activation "element" that right is being inside the playground; with "modifier" it is the key. Releasing the right ends the region normally.',
+};
+
 function render() {
   const state = region.state;
   const badge = byId('st-state');
@@ -103,6 +128,12 @@ function render() {
   controls.persistent.disabled = dead;
   controls.touch.disabled = dead;
   controls.modifier.disabled = dead || controls.activation.value !== 'modifier';
+  controls.shape.disabled = dead;
+  controls.controller.disabled = dead;
+  const dragged = controls.controller.value === 'drag';
+  controls.followWidth.disabled = dead || dragged;
+  controls.followHeight.disabled = dead || dragged;
+  controls.effectColor.disabled = dead;
 
   byId('btn-toggle').textContent = state === 'enabled' ? 'Turn off' : 'Turn on';
   byId('btn-toggle').disabled = dead;
@@ -113,6 +144,16 @@ function render() {
   byId('btn-recreate').hidden = !dead;
 
   byId('hint-activation').textContent = HINTS[controls.activation.value];
+  byId('hint-shape').textContent =
+    controls.shape.value === 'circle'
+      ? 'The largest circle the box allows; the reported bounds are that square.'
+      : controls.shape.value === 'ellipse'
+        ? 'The ellipse fills the requested box exactly.'
+        : 'The rectangle is the box itself.';
+  byId('hint-controller').textContent = CONTROLLER_HINTS[controls.controller.value];
+  byId('hint-follow-size').textContent = dragged
+    ? "Only the follow controller uses followSize — with 'drag' it is not sent, because the library warns about it. Equal sides mean a square."
+    : 'Equal sides mean a square; different sides mean a rectangle. Sizes must be finite and positive.';
   byId('hint-mount').textContent =
     controls.mount.value === 'top-layer'
       ? 'The layer is a popover in the top layer: the guaranteed variant — the page cannot push it down with z-index, transform, opacity or filter.'
@@ -190,11 +231,29 @@ byId('btn-remove').addEventListener('click', () => {
 byId('btn-reset').addEventListener('click', () => {
   controls.activation.value = INITIAL.activation;
   controls.modifier.value = INITIAL.modifier;
+  controls.shape.value = INITIAL.shape;
+  controls.controller.value = INITIAL.controller;
+  controls.followWidth.value = String(INITIAL.followWidth);
+  controls.followHeight.value = String(INITIAL.followHeight);
+  controls.effectColor.value = INITIAL.effectColor;
   controls.mount.value = INITIAL.mount;
   controls.persistent.checked = INITIAL.persistent;
   controls.touch.checked = INITIAL.touch === 'surface';
   applyControls();
   log('setOptions — the page settings at load time');
+});
+
+byId('btn-reject').addEventListener('click', () => {
+  const before = format(region.bounds ?? { x: 0, y: 0, width: 0, height: 0 });
+  try {
+    region.setOptions({ effectColor: 'red' });
+    log('setOptions({ effectColor: "red" }) — unexpectedly accepted');
+  } catch (error) {
+    log(`setOptions rejected — ${error.message}`);
+  }
+  const after = format(region.bounds ?? { x: 0, y: 0, width: 0, height: 0 });
+  log(`geometry unchanged — ${before} / ${after}`);
+  render();
 });
 
 byId('btn-destroy').addEventListener('click', () => {

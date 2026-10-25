@@ -4,12 +4,17 @@ Notable changes to this project, one section per released version.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version is `0.x`, the public
-API is frozen per minor version: within `0.1.x` names, signatures and semantics do not change; a
+API is frozen per minor version: within `0.2.x` names, signatures and semantics do not change; a
 breaking change bumps the minor version.
 
 ## [Unreleased]
 
-Not released. Nothing below is in `0.1.0` on npm, or in the `v0.1.0` tag.
+Nothing yet.
+
+## [0.2.0] - 2026-10-25
+
+**Released 2026-10-25.** Published to npm as `visual-region@0.2.0`; this version's source is tagged
+`v0.2.0`. Everything below is the state of the source tree at this version.
 
 ### Added
 

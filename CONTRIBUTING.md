@@ -8,7 +8,7 @@ the few rules that are not negotiable in this project.
 Read [README.md](README.md) — it is the contract for the public API, and it is written to be the
 source of truth rather than a summary of one. Two boundaries matter most:
 
-- **The v0.1 public API is frozen.** Names, signatures and semantics do not change within `0.1.x`.
+- **The v0.2 public API is frozen.** Names, signatures and semantics do not change within `0.2.x`.
   Adding a public name is a decision, not a detail — open an issue first.
 - **A nontrivial change starts with a plan.** Say what you intend to change and why before writing
   the code — an issue is enough — and afterwards say what you measured and what surprised you. That

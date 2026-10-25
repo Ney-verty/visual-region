@@ -43,12 +43,12 @@ fs.writeFileSync(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>visual-region 0.1</title>
+    <title>visual-region 0.2</title>
     <meta http-equiv="refresh" content="0; url=./demo/" />
     <link rel="canonical" href="./demo/" />
   </head>
   <body>
-    <p><a href="./demo/">visual-region 0.1 demo</a></p>
+    <p><a href="./demo/">visual-region 0.2 demo</a></p>
   </body>
 </html>
 `,

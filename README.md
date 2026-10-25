@@ -7,16 +7,16 @@ The page's DOM is not touched: no elements are copied, moved or re-rendered, and
 nothing but its own layer. The single exception is the inline `touch-action` it puts on your surface
 when you opt into touch input, which it also restores — see [Touch input](#touch-input). Everything
 under the layer keeps working: clicks reach their elements, the wheel scrolls the page, and text stays
-selectable while a region is on screen. The effect in v0.1 is **inversion** — the region renders the
+selectable while a region is on screen. The effect in v0.2 is **inversion** — the region renders the
 pixels underneath it as a colour negative.
 
 - zero runtime dependencies, framework-agnostic;
 - ESM, CommonJS and a `<script>` build; TypeScript types included;
 - requires the Popover API (feature-detected, never user-agent sniffed) — see
   [Browser support](#browser-support);
-- v0.1.0 is released (2026-10-11) — see
+- v0.2.0 is released (2026-10-25) — see
   [CHANGELOG.md](https://github.com/Ney-verty/visual-region/blob/main/CHANGELOG.md). The public API
-  below is frozen for v0.1: within `0.1.x`, names, signatures and semantics do not change.
+  below is frozen for v0.2: within `0.2.x`, names, signatures and semantics do not change.
 
 ## Install
 
@@ -41,13 +41,13 @@ The IIFE build is served by any static host, and any CDN that mirrors npm will f
 `unpkg` / `jsdelivr` fields:
 
 ```html
-<script src="https://your-cdn.example/visual-region@0.1.0/dist/visual-region.global.js"></script>
+<script src="https://your-cdn.example/visual-region@0.2.0/dist/visual-region.global.js"></script>
 <script>
   const region = VisualRegion.visualRegion({ activation: 'always' });
 </script>
 ```
 
-`@0.1.0` in that URL is the published version; use whatever URL your host or CDN gives you. A
+`@0.2.0` in that URL is the published version; use whatever URL your host or CDN gives you. A
 `<script>` tag is the one case where the library initializes marked-up elements on its own —
 connecting it that way is already a statement that it may act by itself.
 `import`ing it is not: the main entry has no side effects.
@@ -75,7 +75,7 @@ lifecycle — is below.
 
 `import 'visual-region/auto'` (or the `<script>` build) scans the document for
 `data-visual-region="invert"` and creates one instance per marked element. The value is the effect
-name: the marker has to say what it turns on, and in v0.1 `"invert"` is the only value — any other
+name: the marker has to say what it turns on, and in v0.2 `"invert"` is the only value — any other
 value warns once and skips the element.
 
 ```html
@@ -163,7 +163,7 @@ Every option is optional and flat. Defaults are the values the instance actually
 
 | Option            | Type                                          | Default         | Meaning                                                                                                                      |
 | ----------------- | --------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `effect`          | `'invert'`                                    | `'invert'`      | what the region does; v0.1 has exactly one effect                                                                            |
+| `effect`          | `'invert'`                                    | `'invert'`      | what the region does; v0.2 has exactly one effect                                                                            |
 | `effectColor`     | `string`                                      | `'#ffffff'`     | the operand colour of the difference, `#rrggbb`; see [The effect and its operand colour](#the-effect-and-its-operand-colour) |
 | `shape`           | `'rect' \| 'ellipse' \| 'circle'`             | `'rect'`        | the geometry of the region; see [Shapes](#shapes)                                                                            |
 | `controller`      | `'drag' \| 'follow'`                          | `'drag'`        | how the geometry is produced: a press and pull, or the pointer alone; see [Following the pointer](#following-the-pointer)    |
@@ -207,7 +207,7 @@ is human-readable diagnostic text, written to be read by a person. It is not a s
 machine-readable identifier: do not match on its wording, which may change in a patch release. The
 same is true of the text of the library's `TypeError`s and of its console warnings. If a program
 ever needs to classify why a region went away, that calls for a dedicated field, not for parsing
-these strings; v0.1 has no such field.
+these strings; v0.2 has no such field.
 
 ### Validation
 
@@ -404,7 +404,7 @@ absolute. `setRegion()` enables the instance if needed and emits `start` with
 `source: 'programmatic'`; it returns `false` when the instance cannot be enabled (destroyed, or an
 environment without a top layer). `bounds` still reports the geometry that is currently shown.
 
-In v0.1 an instance has **one** region: calling `setRegion()` again replaces the geometry instead of
+In v0.2 an instance has **one** region: calling `setRegion()` again replaces the geometry instead of
 adding a second one, and `clearRegion()` removes it. `clearRegion()` also clears a region left
 behind by `persistent`. More than one region per instance is not implemented — see
 [Roadmap](#roadmap--not-implemented).
@@ -491,7 +491,7 @@ Consequences worth knowing before wiring two of them together:
 - the layers are separate elements, so the one that was mounted later is above the other one in the
   top layer.
 
-A single instance cannot overlap itself in v0.1: it has exactly one region. For what a future
+A single instance cannot overlap itself in v0.2: it has exactly one region. For what a future
 multiple-region model is intended to do, see the [roadmap](#roadmap--not-implemented) — including the
 intended default of union semantics, where an overlap receives the effect once.
 
@@ -536,7 +536,7 @@ What this does **not** say:
 
 - **Safari is not confirmed.** Linux WebKit is a different build of a related engine on a different
   platform, and its results are not a Safari result. Real-device Safari/iOS validation was not
-  performed for v0.1.0 — macOS and iOS Safari are an accepted validation gap, not a checked result;
+  performed for v0.1.0 or v0.2.0 — macOS and iOS Safari are an accepted validation gap, not a checked result;
 - no minimum browser versions are claimed. The requirement is the Popover API, which is detected at
   runtime (no user-agent sniffing) — if it is present, the default mount works; if it is not,
   `supported` is `false` and nothing pretends otherwise. Without it, `mount: 'fixed'` is the explicit
@@ -577,7 +577,7 @@ colours](https://raw.githubusercontent.com/Ney-verty/visual-region/v0.1.0/assets
      README.md and LICENSE), so a repository-relative path has nothing to resolve against inside the
      tarball. The tag makes the URL immutable and independent of later changes to the file. -->
 
-The screenshot above is the demo page with an active region: the rectangle covers part of the text
+The screenshot above is the demo page at `v0.1.0` with an active region: the rectangle covers part of the text
 and part of the bar chart, and the unfilled part of that same chart stays outside it, so the original
 and the altered pixels are visible on one object.
 
@@ -586,17 +586,20 @@ npm run demo        # build + a local server: http://127.0.0.1:4317/demo/
 npm run demo:site   # the same page as a built static site
 ```
 
-The demo is a playground: a main drag scenario, a panel with the real options of v0.1, programmatic
-`setRegion()`, and a stress-test section (hostile roots, HiDPI, CSP) below the main playground.
+The demo is a playground: a main drag scenario, a panel with the real options of v0.2 — shapes,
+both controllers, `followSize` and `effectColor` — programmatic `setRegion()`, and a stress-test
+section (hostile roots, HiDPI, CSP) below the main playground.
 `.github/workflows/pages.yml` publishes it to GitHub Pages: <https://ney-verty.github.io/visual-region/>.
 
-## Available in v0.1
+## Available in v0.2
 
 The complete list of what this version does, so nothing above has to be inferred:
 
-- drag a rectangle with a pointer, with a modifier key, inside an element, or not at all;
+- drag a rectangle, ellipse or circle with a pointer, with a modifier key, inside an element, or not
+  at all;
+- follow the pointer with `controller: 'follow'`, sized by `followSize`;
+- the `invert` effect with a configurable operand colour, `effectColor`;
 - one programmatic region per instance: `setRegion(bounds)` / `clearRegion()` / `bounds`;
-- the `invert` effect, with the rectangular shape;
 - layers in the top layer by default, legacy `fixed` mounting by explicit opt-in;
 - `persistent` regions, `threshold`, `zIndex` (legacy mount only);
 - touch input as an explicit opt-in on one element, with `touch-action` handled and restored;
@@ -604,10 +607,9 @@ The complete list of what this version does, so nothing above has to be inferred
   `supported`;
 - the seven events above, `enable()` / `disable()` / `destroy()`, and live `setOptions()`.
 
-## New in v0.2 (unreleased)
+## What's new in v0.2
 
-`0.1.0` is what npm holds and what the tag `v0.1.0` points at. This source tree has more than that, and
-this is the whole list of it — unreleased, so treat it as the direction and not as a published promise:
+`0.2.0` is this release. This is the whole list of what it adds over `0.1.0`:
 
 - **Two more shapes**, `ellipse` and `circle`, both on the geometry contract every shape implements —
   see [Shapes](#shapes);
@@ -629,14 +631,15 @@ this is the whole list of it — unreleased, so treat it as the direction and no
 
 ## Roadmap / not implemented
 
-None of this exists in v0.1, and none of it should be inferred from the API above. It is recorded so
+None of this exists in v0.2, and none of it should be inferred from the API above. It is recorded so
 the direction is not a mystery.
 
 - **Multiple regions per instance.** The intended default is union semantics: overlapping regions
   receive the effect once, not twice. A per-region API would follow the shape
   `addRegion(bounds) → id`, `updateRegion(id, bounds)`, `removeRegion(id)`, `clearRegions()`. Note
   the name: `createRegion` and `removeRegion(bounds)` do not exist and never did in a released
-  version — v0.1 has `setRegion()` / `clearRegion()`, and the plural API is a separate, later design.
+  version — v0.1 and v0.2 have `setRegion()` / `clearRegion()`, and the plural API is a separate,
+  later design.
 - **Element-bound regions.** `addElementRegion(element, options)`: the library tracking an element's
   box instead of you measuring it. It needs a resize/scroll watch and a decision about
   `position: fixed` versus document coordinates, neither of which is designed yet.

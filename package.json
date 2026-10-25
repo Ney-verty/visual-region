@@ -1,6 +1,6 @@
 {
   "name": "visual-region",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Drag a region over any page and visually alter only what is inside it. Zero runtime dependencies, framework-agnostic.",
   "keywords": [
     "region",
