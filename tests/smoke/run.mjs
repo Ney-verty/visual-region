@@ -425,11 +425,7 @@ function build(report) {
 
 /** `#rrggbb` → the per-channel operand used by the pixel comparator. */
 function operandOf(hex) {
-  return [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ];
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 }
 
 function rgbCss([r, g, b]) {
