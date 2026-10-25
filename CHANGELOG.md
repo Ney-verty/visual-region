@@ -23,32 +23,40 @@ Not released. Nothing below is in `0.1.0` on npm, or in the `v0.1.0` tag.
   no gesture at all: no press, no release, and no `pointerdown` listener. The activation right is
   checked on **every** accepted event, so releasing the modifier or leaving the allowed surface ends the
   session; a mouse release does not end it, a touch release does.
+- **`effectColor`:** the operand colour of the difference effect, `effectColor?: string`, default
+  `#ffffff`. It is written exactly as `#rrggbb` (hex digits, case-insensitive, stored in lower case),
+  and it is a per-instance operand rather than an output colour: with the default the arithmetic is
+  still exact inversion, while any other colour is subtracted channel by channel
+  (`abs(input - effectColor)`). It belongs to the instance and can be set from JavaScript or from
+  `data-effect-color`; the shared effect definition is never mutated.
 - **A marked source for geometry writes** inside the engine — the engine's own writes and a
   controller's are distinguishable, which is what makes the rule under _Changed_ possible without
   adding a verb to the controller contract.
-- **The declarative markup grew three attributes:** `data-shape`, `data-controller` and
-  `data-follow-size`, so the two shapes and the follow controller can be turned on without
-  JavaScript. `data-follow-size` is read as `"120"` or `"120x80"` (a lowercase `x`, no spaces);
-  anything else warns once and leaves the default size in place rather than throwing, because
-  markup cannot be typed and one bad attribute should not take the page down.
+- **The declarative markup grew four attributes:** `data-shape`, `data-controller`,
+  `data-follow-size` and `data-effect-color`, so the two shapes, the follow controller and the
+  operand colour can be turned on without JavaScript. `data-follow-size` is read as `"120"` or
+  `"120x80"` (a lowercase `x`, no spaces); anything else warns once and leaves the default size in
+  place rather than throwing, because markup cannot be typed and one bad attribute should not take
+  the page down.
 
 ### Changed
 
-- **A gesture no longer replaces a programmatic region.** While a region shown by `setRegion()` is on
-  screen, geometry coming from a controller is ignored; `clearRegion()` hands the geometry back. In
-  `0.1.0` a drag overwrote such a region. The rule covers both controllers and is not specific to
-  `follow`.
+- **Behavioural change: a gesture no longer replaces a programmatic region.** While a region shown
+  by `setRegion()` is on screen, geometry coming from a controller is ignored; `clearRegion()` hands
+  the geometry back. In `0.1.0` a drag overwrote such a region, so this differs from v0.1 behavior.
+  The rule covers both controllers and is not specific to `follow`.
 - **The internal list of end causes** gained a third normal end, `'ineligible'` — losing the activation
   right in the middle of a follow. It is a normal end, so it produces `end` and never `cancel`; the
   public union of `cancel.reason` (`'pointercancel' | 'blur' | 'visibility'`) is unchanged.
 - **Both size budgets were raised**, each by an explicit decision and each against a measurement
   rather than an estimate: the full-consumer ESM budget from 6.00 KB to 6.50 KB gzip (6.02 KB
   measured, up from 5.03 KB in `0.1.0`), and the IIFE budget from 7.00 KB to 7.50 KB (6.87 → 7.05 KB)
-  when the declarative parser gained the three attributes above — that build is the one that runs
-  auto-init, and the growth was attributed to `src/index.ts` alone by building the same tree with the
-  parser reverted. The consumer build was unchanged by that step (6.00 KB in both builds), so nothing
-  was duplicated into the runtime. Both remain hard gates, and cutting validation or diagnostics to
-  save bytes is not an option this project takes.
+  when the declarative parser gained `data-shape`, `data-controller` and `data-follow-size`;
+  `data-effect-color` joined the same parser with the operand colour above. That build is the one
+  that runs auto-init, and the growth was attributed to `src/index.ts` alone by building the same
+  tree with the parser reverted. The consumer build was unchanged by that step (6.00 KB in both
+  builds), so nothing was duplicated into the runtime. Both remain hard gates, and cutting
+  validation or diagnostics to save bytes is not an option this project takes.
 
 ### Fixed
 

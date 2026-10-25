@@ -14,8 +14,9 @@ pixels underneath it as a colour negative.
 - ESM, CommonJS and a `<script>` build; TypeScript types included;
 - requires the Popover API (feature-detected, never user-agent sniffed) — see
   [Browser support](#browser-support);
-- v0.1.0 is released (2026-10-11) — see [CHANGELOG.md](CHANGELOG.md). The public API below is frozen
-  for v0.1: within `0.1.x`, names, signatures and semantics do not change.
+- v0.1.0 is released (2026-10-11) — see
+  [CHANGELOG.md](https://github.com/Ney-verty/visual-region/blob/main/CHANGELOG.md). The public API
+  below is frozen for v0.1: within `0.1.x`, names, signatures and semantics do not change.
 
 ## Install
 
@@ -160,23 +161,23 @@ broken, there is simply no honest way to draw the effect. `init()` saves you the
 
 Every option is optional and flat. Defaults are the values the instance actually uses:
 
-| Option            | Type                              | Default         | Meaning                                                                                                                      |
-| ----------------- | --------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `effect`          | `'invert'`                        | `'invert'`      | what the region does; v0.1 has exactly one effect                                                                            |
-| `effectColor`     | `string`                          | `'#ffffff'`     | the operand colour of the difference, `#rrggbb`; see [The effect and its operand colour](#the-effect-and-its-operand-colour) |
-| `shape`           | `'rect' \| 'ellipse' \| 'circle'` | `'rect'`        | the geometry of the region; see [Shapes](#shapes)                                                                            |
-| `controller`      | `'drag' \| 'follow'`              | `'drag'`        | how the geometry is produced: a press and pull, or the pointer alone; see [Following the pointer](#following-the-pointer)    |
-| `followSize`      | `number \| FollowSize`            | `120`           | the size of a followed region, in CSS px; a number means a square; ignored by `controller: 'drag'`                           |
-| `activation`      | `ActivationKind`                  | `'modifier'`    | who may start a gesture                                                                                                      |
-| `modifier`        | `ModifierSpec \| null`            | `'alt'`         | key(s) for `activation: 'modifier'`; also accepts a predicate                                                                |
-| `surface`         | `HTMLElement \| null`             | `null`          | the element the gesture belongs to; required by `activation: 'element'` and `touch: 'surface'`                               |
-| `interactionRoot` | `EventTarget \| null`             | `document.body` | where `pointerdown` is listened for, in the capture phase; `pointermove`/`up`/`cancel` go on `window`                        |
-| `touch`           | `TouchMode`                       | `'off'`         | touch input: `off` or `surface`                                                                                              |
-| `mount`           | `MountKind`                       | `'top-layer'`   | how the layer is placed; see [Mounting](#mounting)                                                                           |
-| `persistent`      | `boolean`                         | `false`         | keep the region after the pointer is released                                                                                |
-| `disabled`        | `boolean`                         | `false`         | create the instance without enabling it                                                                                      |
-| `threshold`       | `number`                          | `3`             | how far the pointer must move before it counts as a gesture (pixels)                                                         |
-| `zIndex`          | `number`                          | `2147483646`    | used by the legacy `fixed` mount only; ignored in the top layer                                                              |
+| Option            | Type                                          | Default         | Meaning                                                                                                                      |
+| ----------------- | --------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `effect`          | `'invert'`                                    | `'invert'`      | what the region does; v0.1 has exactly one effect                                                                            |
+| `effectColor`     | `string`                                      | `'#ffffff'`     | the operand colour of the difference, `#rrggbb`; see [The effect and its operand colour](#the-effect-and-its-operand-colour) |
+| `shape`           | `'rect' \| 'ellipse' \| 'circle'`             | `'rect'`        | the geometry of the region; see [Shapes](#shapes)                                                                            |
+| `controller`      | `'drag' \| 'follow'`                          | `'drag'`        | how the geometry is produced: a press and pull, or the pointer alone; see [Following the pointer](#following-the-pointer)    |
+| `followSize`      | `number \| { width: number; height: number }` | `120`           | the size of a followed region, in CSS px; a number means a square; ignored by `controller: 'drag'`                           |
+| `activation`      | `ActivationKind`                              | `'modifier'`    | who may start a gesture                                                                                                      |
+| `modifier`        | `ModifierSpec \| null`                        | `'alt'`         | key(s) for `activation: 'modifier'`; also accepts a predicate                                                                |
+| `surface`         | `HTMLElement \| null`                         | `null`          | the element the gesture belongs to; required by `activation: 'element'` and `touch: 'surface'`                               |
+| `interactionRoot` | `EventTarget \| null`                         | `document.body` | where `pointerdown` is listened for, in the capture phase; `pointermove`/`up`/`cancel` go on `window`                        |
+| `touch`           | `TouchMode`                                   | `'off'`         | touch input: `off` or `surface`                                                                                              |
+| `mount`           | `MountKind`                                   | `'top-layer'`   | how the layer is placed; see [Mounting](#mounting)                                                                           |
+| `persistent`      | `boolean`                                     | `false`         | keep the region after the pointer is released                                                                                |
+| `disabled`        | `boolean`                                     | `false`         | create the instance without enabling it                                                                                      |
+| `threshold`       | `number`                                      | `3`             | how far the pointer must move before it counts as a gesture (pixels)                                                         |
+| `zIndex`          | `number`                                      | `2147483646`    | used by the legacy `fixed` mount only; ignored in the top layer                                                              |
 
 `| undefined` on every key is for `exactOptionalPropertyTypes`: `{ modifier: undefined }` is the
 ordinary way to drop a setting. `null` is a real value in three places, and it does not mean the same
@@ -213,18 +214,20 @@ these strings; v0.1 has no such field.
 Options are validated once, when the instance is created or `setOptions()` is called. What happens to
 a mistake depends on whether it has a safe reading:
 
-| Mistake                                                                          | Result                                                                  |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| unknown key                                                                      | warns once, the key is ignored                                          |
-| unknown value for `effect`, `shape`, `mount`, `activation` or `touch`            | `TypeError`                                                             |
-| `effectColor` that is not `#rrggbb` (short form, alpha, CSS name or function)    | `TypeError`                                                             |
-| `surface` that is not an element, `interactionRoot` that is not an `EventTarget` | `TypeError`                                                             |
-| `threshold` that is not a non-negative finite number, non-integer `zIndex`       | `TypeError`                                                             |
-| `activation: 'element'` or `touch: 'surface'` without `surface`                  | `TypeError`                                                             |
-| `activation: 'modifier'` with `modifier: null`                                   | `TypeError`                                                             |
-| `modifier` given with an activation that does not use it                         | warns once, has no effect                                               |
-| `persistent` / `disabled` given a non-boolean                                    | not validated; only `true` is "on"                                      |
-| the site's CSS winning over our `touch-action`                                   | warns once, the touch drag is refused (see [Touch input](#touch-input)) |
+| Mistake                                                                                             | Result                                                                  |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| unknown key                                                                                         | warns once, the key is ignored                                          |
+| unknown value for `effect`, `shape`, `controller`, `mount`, `activation` or `touch`                 | `TypeError`                                                             |
+| `effectColor` that is not `#rrggbb` (short form, alpha, CSS name or function)                       | `TypeError`                                                             |
+| `followSize` that is not a finite positive number or `{ width, height }` with positive finite sides | `TypeError`                                                             |
+| `followSize` given with `controller: 'drag'`                                                        | warns once, has no effect                                               |
+| `surface` that is not an element, `interactionRoot` that is not an `EventTarget`                    | `TypeError`                                                             |
+| `threshold` that is not a non-negative finite number, non-integer `zIndex`                          | `TypeError`                                                             |
+| `activation: 'element'` or `touch: 'surface'` without `surface`                                     | `TypeError`                                                             |
+| `activation: 'modifier'` with `modifier: null`                                                      | `TypeError`                                                             |
+| `modifier` given with an activation that does not use it                                            | warns once, has no effect                                               |
+| `persistent` / `disabled` given a non-boolean                                                       | not validated; only `true` is "on"                                      |
+| the site's CSS winning over our `touch-action`                                                      | warns once, the touch drag is refused (see [Touch input](#touch-input)) |
 
 A `TypeError` names the option and what was expected. Configuration errors throw because a silently
 ignored option is a bug report waiting to happen; `setOptions()` validates the same way, so a rejected
@@ -547,11 +550,11 @@ Gzip, from the built artifacts:
 
 | Artifact                               | Raw      | Gzip        | Budget    |
 | -------------------------------------- | -------- | ----------- | --------- |
-| Consumer using the whole library (ESM) | 17.90 KB | **6.13 KB** | ≤ 6.50 KB |
-| The same as the CDN/IIFE build         | 21.29 KB | **7.21 KB** | ≤ 7.50 KB |
+| Consumer using the whole library (ESM) | 17.95 KB | **6.15 KB** | ≤ 6.50 KB |
+| The same as the CDN/IIFE build         | 21.33 KB | **7.23 KB** | ≤ 7.50 KB |
 | Consumer using only `supported`        | 0.85 KB  | 0.49 KB     | —         |
-| `index.cjs` (CommonJS entry)           | 21.11 KB | 7.13 KB     | —         |
-| `index.d.ts` (types, no runtime cost)  | 3.41 KB  | 1.44 KB     | —         |
+| `index.cjs` (CommonJS entry)           | 21.15 KB | 7.15 KB     | —         |
+| `index.d.ts` (types, no runtime cost)  | 3.50 KB  | 1.48 KB     | —         |
 
 "Whole library" means everything a normal consumer gets when it touches the API: the instance, both
 controllers, all three shapes, the layer and the blend renderer. The two budgets are hard gates, not
@@ -560,8 +563,9 @@ the v0.2 declarative attributes — the consumer from 6.00 to 6.50 KB, the IIFE 
 when the parser gained `data-shape`, `data-controller` and `data-follow-size`. The consumer build
 drops the parser entirely, so that step did not move it; `effectColor` is on the consumer path
 instead (validation and normalization live in the spec), and it moved the consumer from 6.00 to
-6.13 KB and the IIFE from 7.05 to 7.21 KB. All numbers are measured against the built artifacts, not
-estimated, with the reasons recorded in [harness/DECISIONS.md](harness/DECISIONS.md).
+6.13 KB and the IIFE from 7.05 to 7.21 KB. The atomic-validation fix took that to the current 6.15
+and 7.23 KB. All numbers are measured against the built artifacts, not estimated, with the reasons
+recorded in [harness/DECISIONS.md](https://github.com/Ney-verty/visual-region/blob/main/harness/DECISIONS.md).
 
 ## Demo
 
@@ -613,6 +617,12 @@ this is the whole list of it — unreleased, so treat it as the direction and no
 - **`effectColor`** — the operand colour of the difference effect, from JavaScript or from
   `data-effect-color`; `#ffffff` stays the default, so existing pages are unchanged — see
   [The effect and its operand colour](#the-effect-and-its-operand-colour);
+- **four declarative attributes** — `data-shape`, `data-controller`, `data-follow-size` and
+  `data-effect-color`, so the new shapes, the follow controller and the operand colour work from
+  markup without JavaScript — see [Declarative markup](#declarative-markup);
+- **atomic `setOptions()` validation** — a patch rejected during option validation no longer leaves
+  stored options diverged from the active configuration. A failure after reconfiguration has begun is
+  outside this guarantee — see [Validation](#validation);
 - **one behaviour change**: while a region shown by `setRegion()` is on screen, a gesture no longer
   replaces it; `clearRegion()` hands the geometry back to the controller (see
   [Showing a region without a gesture](#showing-a-region-without-a-gesture)).
@@ -694,8 +704,8 @@ the direction is not a mystery.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks that must pass and what a change is expected to
-include.
+See [CONTRIBUTING.md](https://github.com/Ney-verty/visual-region/blob/main/CONTRIBUTING.md) for the
+checks that must pass and what a change is expected to include.
 
 ## License
 
