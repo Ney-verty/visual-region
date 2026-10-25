@@ -83,11 +83,18 @@ export class VisualRegion {
    * options.
    *
    * An unknown option or an incompatible combination throws a TypeError — just as in the
-   * constructor: a configuration error must not degrade silently.
+   * constructor: a configuration error must not degrade silently. A refused patch changes
+   * nothing: the instance keeps its previous options and behaviour.
    */
   setOptions(patch: VisualRegionOptions): void {
-    this.options = { ...this.options, ...patch };
-    this.engine.reconfigure(normalizeSpec(this.options));
+    /* Validation first: the merge used to be written back before normalizeSpec() could throw,
+       which left the stored options diverging from the active spec and poisoned later patches. */
+    const next = { ...this.options, ...patch };
+    const spec = normalizeSpec(next);
+    const destroyed = this.engine.getState() === 'destroyed';
+    this.engine.reconfigure(spec);
+    /* A dead engine ignores the patch, so it must not accumulate options it will never apply. */
+    if (!destroyed) this.options = next;
   }
 
   /**

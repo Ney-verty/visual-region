@@ -50,6 +50,15 @@ Not released. Nothing below is in `0.1.0` on npm, or in the `v0.1.0` tag.
   was duplicated into the runtime. Both remain hard gates, and cutting validation or diagnostics to
   save bytes is not an option this project takes.
 
+### Fixed
+
+- **`setOptions()` validation is atomic.** A patch refused by the option validator leaves the
+  stored options and the active configuration exactly as they were. Before, the merge into the
+  stored options happened before validation, so a rejected patch could poison later updates (an
+  invalid `effectColor` kept failing every subsequent call that did not overwrite it) and could
+  remember the valid half of a mixed patch that was never applied. A failure after
+  `reconfigure()` has begun is outside this guarantee.
+
 ## [0.1.0] — 2026-10-11
 
 **Released 2026-10-11.** Published to npm as `visual-region@0.1.0`; this version's source is tagged

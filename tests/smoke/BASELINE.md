@@ -13,11 +13,18 @@ here, in prose, and a run of the same shape is re-recorded on demand by the reci
 
 | Profile | Checks  | Records | Failures |
 | ------- | ------- | ------- | -------- |
-| DPR=1   | 146 × 3 | 170 × 3 | 0        |
-| DPR=2   | 120 × 3 | 129 × 3 | 0        |
+| DPR=1   | 163 × 3 | 188 × 3 | 0        |
+| DPR=2   | 133 × 3 | 143 × 3 | 0        |
 
-Re-recorded 2026-10-15 for the v0.2 slice (the previous numbers were 125/149 at DPR=1 and 99/108 at
-DPR=2). The 21 new checks are the slice's own: eleven in the in-page battery — two `shapes:` checks
+Re-recorded 2026-10-25 for the transactional-setOptions slice: two in-page checks were added
+(`setOptions: a rejected patch leaves the live instance untouched` and `setOptions: a rejected patch
+in one instance does not change another`). The row before this re-record (146/170 and 120/129) was
+recorded 2026-10-15 and predated the `effectColor` slice, whose report recorded 161 and 131 checks;
+this run supersedes both.
+
+The 2026-10-15 run was recorded for the v0.2 slice; its own note said the previous numbers were
+125/149 at DPR=1 and 99/108 at DPR=2. The 21 new checks are the slice's own: eleven in the in-page
+battery — two `shapes:` checks
 (what a shape reports), eight `follow:` checks (a move opens a session with no press, one write per
 frame with the last point winning, losing the right is a normal `end`, leaving the surface, a touch
 release versus a mouse release, `persistent`, `cancel`, and the programmatic region outranking the

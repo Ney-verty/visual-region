@@ -518,7 +518,7 @@ why none are needed.
 
 | Engine         | Version (Playwright 1.63.0) | Result                                 |
 | -------------- | --------------------------- | -------------------------------------- |
-| Chromium       | 153.0.8010.12               | 161 checks pass at DPR=1, 131 at DPR=2 |
+| Chromium       | 153.0.8010.12               | 163 checks pass at DPR=1, 133 at DPR=2 |
 | Firefox        | 155.0                       | same set, same result                  |
 | WebKit (Linux) | 26.6                        | same set, same result                  |
 

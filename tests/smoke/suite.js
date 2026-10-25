@@ -336,6 +336,73 @@ check('setOptions: applies on the fly and keeps the region', () => {
   near(got.x, want.x, 0.5, 'region x after setOptions');
 });
 
+check('setOptions: a rejected patch leaves the live instance untouched', () => {
+  const vr = track(visualRegion({ activation: 'programmatic', effectColor: '#ff00ff' }));
+  const want = { x: 160, y: 180, width: 260, height: 170 };
+  vr.setRegion(want);
+  const layer = vr.element;
+  assert(layer, 'the layer exists');
+  assert(vr.bounds, 'the bounds exist');
+  const color = getComputedStyle(layer).backgroundColor;
+  const bounds = { ...vr.bounds };
+
+  let thrown = null;
+  try {
+    vr.setOptions({ shape: 'ellipse', effectColor: 'invalid' });
+  } catch (error) {
+    thrown = error;
+  }
+
+  assert(thrown instanceof TypeError, `expected TypeError, got ${thrown ? String(thrown) : 'nothing'}`);
+  eq(vr.element, layer, 'the layer must not be recreated');
+  eq(vr.state, 'enabled', 'state');
+  eq(getComputedStyle(vr.element).backgroundColor, color, 'the operand colour');
+  near(vr.bounds.x, bounds.x, 0.5, 'bounds x');
+  near(vr.bounds.width, bounds.width, 0.5, 'bounds width');
+  near(vr.bounds.height, bounds.height, 0.5, 'bounds height');
+
+  /* The old valid colour survives the rejected patch — including the valid field that came
+     in the same mixed patch — and is what the next successful patch builds on. */
+  vr.setOptions({ threshold: 8 });
+  assert(vr.element && vr.element !== layer, 'a valid patch recreates the layer');
+  eq(
+    getComputedStyle(vr.element).backgroundColor,
+    'rgb(255, 0, 255)',
+    'the rejected patch did not replace the operand',
+  );
+  near(vr.bounds.width, want.width, 0.5, 'bounds width after a valid patch');
+  eq(vr.state, 'enabled', 'state after a valid patch');
+});
+
+check('setOptions: a rejected patch in one instance does not change another', () => {
+  const a = track(new VisualRegion({ activation: 'programmatic', effectColor: '#ff00ff' }));
+  const b = track(new VisualRegion({ activation: 'programmatic', effectColor: '#00ffff' }));
+  a.setRegion({ x: 40, y: 60, width: 120, height: 90 });
+  b.setRegion({ x: 240, y: 60, width: 120, height: 90 });
+  const bLayer = b.element;
+  assert(bLayer && b.bounds, 'B has a layer and bounds');
+  const bColor = getComputedStyle(bLayer).backgroundColor;
+  const bBounds = { ...b.bounds };
+
+  let thrown = null;
+  try {
+    a.setOptions({ effectColor: 'invalid' });
+  } catch (error) {
+    thrown = error;
+  }
+  assert(thrown instanceof TypeError, `expected TypeError, got ${thrown ? String(thrown) : 'nothing'}`);
+
+  eq(b.element, bLayer, "B's layer");
+  eq(getComputedStyle(b.element).backgroundColor, bColor, "B's operand");
+  near(b.bounds.x, bBounds.x, 0.5, "B's bounds x");
+  eq(a.state, 'enabled', 'A stays enabled');
+  eq(b.state, 'enabled', 'B stays enabled');
+
+  a.setOptions({ effectColor: '#ffffff' });
+  eq(getComputedStyle(a.element).backgroundColor, 'rgb(255, 255, 255)', 'A applies the valid patch');
+  eq(getComputedStyle(b.element).backgroundColor, bColor, 'B is untouched by A');
+});
+
 check('validation: configuration errors fail loudly (TypeError)', () => {
   const cases = [
     /* The stale example replaced, not the expectation: this case is "an unknown shape
@@ -764,11 +831,7 @@ check('effectColor: two live instances keep their own colour across recreation',
 
     a.destroy();
     b.destroy();
-    eq(
-      document.querySelectorAll('[data-visual-region-layer]').length,
-      layersBefore,
-      'both layers are gone',
-    );
+    eq(document.querySelectorAll('[data-visual-region-layer]').length, layersBefore, 'both layers are gone');
   } finally {
     a.destroy();
     b.destroy();
