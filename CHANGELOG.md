@@ -11,7 +11,7 @@ breaking change bumps the minor version.
 
 Nothing yet.
 
-## [0.2.0] - 2026-10-25
+## [0.2.0] - 2026-11-02
 
 **Released 2026-10-25.** Published to npm as `visual-region@0.2.0`; this version's source is tagged
 `v0.2.0`. Everything below is the state of the source tree at this version.
